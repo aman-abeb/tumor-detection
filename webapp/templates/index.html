@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
+        <div>
+          <span class="brand-title">{{ app_name }}</span>
+        </div>
+      </div>
+      <a href="/" class="top-action">New Analysis</a>
+    </div>
+  </header>
+  <div class="container">
+    <div class="hero card">
+      <h1>{{ app_name }}</h1>
+      <p class="subtitle">
+        Upload a tumor X-ray/ultrasound image and get a detailed multi-model report with YOLO detection, U-Net
+        segmentation, and ResNet18 classification.
+      </p>
+    </div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/analyze" enctype="multipart/form-data" class="card upload-card">
+      <h2>Start New Analysis</h2>
+      <div class="form-consent-grid">
+        <div class="form-panel">
+          <label>Input Image <span class="muted">(required)</span></label>
+          <input type="file" name="image" accept="image/*" required class="file-input" />
+
+          <label>Ground-Truth Mask <span class="muted">(optional, unlocks true Dice/IoU metrics)</span></label>
+          <input type="file" name="mask" accept="image/*" class="file-input" />
+          <label class="consent-check">
+            <input type="checkbox" name="consent" value="yes" required />
+            <span>I have read and understood the information above and agree to proceed.</span>
+          </label>
+        </div>
+
+        <div class="consent-card">
+          <h3>AI Tumor Detection - User Notice & Consent</h3>
+          <p>
+            This application uses a machine learning model to classify tumors as benign or malignant based on uploaded
+            medical images.
+          </p>
+
+          <h4>Important Information:</h4>
+          <ul>
+            <li>This tool is developed for <b>educational and research purposes only</b>.</li>
+            <li>It is <b>not a medical device</b> and does not provide professional medical diagnosis or advice.</li>
+            <li>The model's predictions may be <b>inaccurate, incomplete, or unreliable</b>.</li>
+            <li>Uploaded images may be automatically processed (e.g., cropped or resized), which can affect the results.
+            </li>
+            <li>The system has <b>not been validated by certified medical professionals</b>.</li>
+          </ul>
+
+          <p>
+            You should <b>not rely on this application for medical decisions</b>. Always consult a qualified healthcare
+            professional for diagnosis and treatment.
+          </p>
+
+          <h4>Data & Consent:</h4>
+          <p>By using this application:</p>
+          <ul>
+            <li>You acknowledge that you understand the limitations of this AI system.</li>
+            <li>You agree to use it only for non-medical, informational purposes.</li>
+            <li>
+              You consent to the processing of your uploaded data for analysis in accordance with applicable data
+              protection laws, including the General Data Protection Regulation (GDPR).
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <button type="submit" class="primary-btn">Analyze Tumor</button>
+    </form>
+  </div>
+  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+</body>
+
+</html>

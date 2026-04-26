@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ app_name }} - Results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
+        <div>
+          <span class="brand-title">{{ app_name }}</span>
+        </div>
+      </div>
+      <a href="/" class="top-action">New Analysis</a>
+    </div>
+  </header>
+  <div class="container">
+    <div class="hero card">
+      <h1>{{ app_name }} - Analysis Report</h1>
+      <a href="/" class="back-link">Upload another image</a>
+    </div>
+
+    <div class="card">
+      <h2>Input Image</h2>
+      <img src="{{ input_preview_uri }}" alt="input image" class="input-preview" />
+    </div>
+
+    <div class="card metrics-card">
+      <h2>YOLO Detection</h2>
+      <div class="split-grid">
+        <img src="{{ detection_overlay_uri }}" alt="overlay figure" />
+        <div class="metrics-table">
+          <div class="metrics-row"><span>Best Detection Confidence</span><b>{{ "%.4f"|format(yolo_conf) }}</b></div>
+          <div class="metrics-row"><span>Used Confidence Threshold</span><b>{% if yolo_used_th is not none %}{{
+              "%.3f"|format(yolo_used_th) }}{% else %}N/A{% endif %}</b></div>
+          <div class="metrics-row"><span>Detection Variant</span><b>{{ yolo_variant }}</b></div>
+          <div class="metrics-row"><span>Predicted Boxes</span><b>{{ yolo_num_boxes }}</b></div>
+          <div class="metrics-row"><span>Total Detection Box Area</span><b>{% if yolo_area_pct is not none %}{{
+              "%.2f"|format(yolo_area_pct) }}%{% else %}N/A{% endif %}</b></div>
+          <div class="metrics-row"><span>YOLO to Segmentation (Box IoU)</span><b>{% if box_mask_iou is not none %}{{
+              "%.4f"|format(box_mask_iou) }}{% else %}N/A{% endif %}</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card metrics-card">
+      <h2>U-Net Segmentation</h2>
+      <div class="split-grid">
+        <img src="{{ seg_overlay_uri }}" alt="segmentation overlay" />
+        <img src="{{ seg_prob_uri }}" alt="segmentation probability map" />
+      </div>
+      <div class="metrics-table">
+        <div class="metrics-row"><span>Segmented Tumor Area (pixels)</span><b>{{ seg_area }}</b></div>
+        <div class="metrics-row"><span>Segmented Area Percentage</span><b>{{ "%.2f"|format(seg_area_pct) }}%</b></div>
+        <div class="metrics-row"><span>Dice</span><b>{% if seg_metrics.dice is not none %}{{
+            "%.4f"|format(seg_metrics.dice) }}{% else %}N/A{% endif %}</b></div>
+        <div class="metrics-row"><span>IoU</span><b>{% if seg_metrics.iou is not none %}{{
+            "%.4f"|format(seg_metrics.iou) }}{% else %}N/A{% endif %}</b></div>
+        <div class="metrics-row"><span>Precision</span><b>{% if seg_metrics.precision is not none %}{{
+            "%.4f"|format(seg_metrics.precision) }}{% else %}N/A{% endif %}</b></div>
+        <div class="metrics-row"><span>Recall</span><b>{% if seg_metrics.recall is not none %}{{
+            "%.4f"|format(seg_metrics.recall) }}{% else %}N/A{% endif %}</b></div>
+      </div>
+      <p class="note">{{ seg_metrics.note }}</p>
+    </div>
+
+    <div class="card metrics-card">
+      <h2>ResNet18 Classification</h2>
+      <div class="split-grid">
+        <div class="metrics-table">
+          <div class="metrics-row"><span>Predicted Class</span><b>{{ cls_pred }}</b></div>
+          <div class="metrics-row"><span>Benign Probability</span><b>{{ "%.4f"|format(cls_prob_benign) }}</b></div>
+          <div class="metrics-row"><span>Malignant Probability</span><b>{{ "%.4f"|format(cls_prob_malignant) }}</b>
+          </div>
+        </div>
+        <img src="{{ cls_bar_uri }}" alt="classification probabilities" />
+      </div>
+    </div>
+  </div>
+  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+</body>
+
+</html>
