@@ -1,5 +1,6 @@
 import io
 import os
+import uuid
 from pathlib import Path
 
 import cv2
@@ -7,7 +8,7 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn as nn
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request, url_for
 from PIL import Image
 from torchvision import models
 from ultralytics import YOLO
@@ -18,7 +19,7 @@ import matplotlib.pyplot as plt
 
 APP_NAME = "TumorSight 360"
 BASE_DIR = Path(__file__).resolve().parents[1]
-YOLO_PATH = BASE_DIR / "yolo26n.pt"
+YOLO_PATH = BASE_DIR / "best.pt"
 UNET_PATH = BASE_DIR / "unet_busi.pth"
 CLS_PATH = BASE_DIR / "resnet18_busi_cls.pth"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -26,9 +27,37 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMG_SIZE_SEG = 256
 IMG_SIZE_CLS = 224
 CLASS_NAMES = ["benign", "malignant"]
+TMP_DIR = BASE_DIR / "webapp" / "tmp_uploads"
+TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB upload
+
+
+def _case_state_path(case_id: str) -> Path:
+    return TMP_DIR / f"{case_id}.json"
+
+
+def load_case_state(case_id: str) -> dict:
+    path = _case_state_path(case_id)
+    if not path.exists():
+        return {"case_id": case_id}
+    try:
+        import json
+
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        # If corrupted, start fresh rather than hard-failing the UX.
+        return {"case_id": case_id}
+
+
+def save_case_state(case_id: str, patch: dict) -> dict:
+    import json
+
+    state = load_case_state(case_id)
+    state.update(patch or {})
+    _case_state_path(case_id).write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return state
 
 
 class DoubleConv(nn.Module):
@@ -250,119 +279,319 @@ def build_class_plot(probs):
     return fig_to_data_uri(fig)
 
 
-def metrics_with_optional_gt(pred_mask, gt_mask_optional):
-    if gt_mask_optional is None:
-        return {
-            "dice": None,
-            "iou": None,
-            "precision": None,
-            "recall": None,
-            "note": "Ground-truth mask not provided. True segmentation metrics unavailable.",
-        }
+def roc_curve_manual(y_true, y_score):
+    y_true = np.asarray(y_true).astype(int)
+    y_score = np.asarray(y_score).astype(float)
 
-    pred = (pred_mask > 0).astype(np.uint8)
-    gt = (gt_mask_optional > 0).astype(np.uint8)
+    order = np.argsort(-y_score)
+    y_true = y_true[order]
+    y_score = y_score[order]
 
-    tp = np.sum((pred == 1) & (gt == 1))
-    fp = np.sum((pred == 1) & (gt == 0))
-    fn = np.sum((pred == 0) & (gt == 1))
+    P = int(np.sum(y_true == 1))
+    N = int(np.sum(y_true == 0))
+    if P == 0 or N == 0:
+        raise ValueError("ROC needs both positive and negative samples.")
 
-    dice = (2 * tp) / (2 * tp + fp + fn + 1e-7)
-    iou = tp / (tp + fp + fn + 1e-7)
-    precision = tp / (tp + fp + 1e-7)
-    recall = tp / (tp + fn + 1e-7)
-    return {
-        "dice": float(dice),
-        "iou": float(iou),
-        "precision": float(precision),
-        "recall": float(recall),
-        "note": "Computed against uploaded ground-truth mask.",
-    }
+    tps = 0
+    fps = 0
+    fpr = [0.0]
+    tpr = [0.0]
+    for yt in y_true:
+        if yt == 1:
+            tps += 1
+        else:
+            fps += 1
+        fpr.append(fps / N)
+        tpr.append(tps / P)
+    return np.array(fpr), np.array(tpr)
+
+
+def auc_trapz(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    trap = getattr(np, "trapz", None)
+    if callable(trap):
+        return float(trap(y, x))
+    # numpy>=2.0
+    return float(np.trapezoid(y, x))
+
+
+def build_roc_plot(fpr, tpr, auc_val):
+    fig, ax = plt.subplots(figsize=(5.2, 4))
+    ax.plot(fpr, tpr, label=f"ROC (AUC={auc_val:.3f})", color="#5DA5DA", linewidth=2)
+    ax.plot([0, 1], [0, 1], linestyle="--", color="gray", linewidth=1)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("ResNet18 ROC (BUSI_Jpeg sample)")
+    ax.grid(alpha=0.25)
+    ax.legend(loc="lower right")
+    return fig_to_data_uri(fig)
+
+
+def compute_roc():
+    """Compute the ROC curve fresh on every call (no caching)."""
+    result = {"uri": None, "auc": None, "n": 0, "error": None}
+    try:
+        max_samples = int(os.getenv("ROC_MAX_SAMPLES", "200"))
+        base_dir = BASE_DIR / "BUSI_Jpeg"
+        pos_dir = base_dir / "malignant"
+        neg_dir = base_dir / "benign"
+
+        pos_paths = sorted(pos_dir.glob("*.png"))
+        neg_paths = sorted(neg_dir.glob("*.png"))
+        if not pos_paths or not neg_paths:
+            raise FileNotFoundError("BUSI_Jpeg/benign and BUSI_Jpeg/malignant PNGs are required for ROC.")
+
+        # Balance classes and cap.
+        m = min(len(pos_paths), len(neg_paths), max_samples // 2 if max_samples > 1 else 1)
+        pos_paths = pos_paths[:m]
+        neg_paths = neg_paths[:m]
+
+        y_true = []
+        y_score = []
+
+        # Prevent training-time artifacts like masks and non-image files by strict dirs + extension.
+        for p in neg_paths:
+            bgr = cv2.imread(str(p))
+            if bgr is None:
+                continue
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            _, probs = predict_classification(rgb)
+            y_true.append(0)
+            y_score.append(float(probs[1]))  # P(malignant)
+
+        for p in pos_paths:
+            bgr = cv2.imread(str(p))
+            if bgr is None:
+                continue
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            _, probs = predict_classification(rgb)
+            y_true.append(1)
+            y_score.append(float(probs[1]))  # P(malignant)
+
+        if len(set(y_true)) < 2:
+            raise ValueError("Not enough valid images to compute ROC.")
+
+        fpr, tpr = roc_curve_manual(y_true, y_score)
+        auc_val = auc_trapz(fpr, tpr)
+        result.update({"uri": build_roc_plot(fpr, tpr, auc_val), "auc": float(auc_val), "n": int(len(y_true))})
+    except Exception as e:
+        result.update({"error": str(e)})
+
+    return result
+
+
+def save_uploaded_image(image_pil):
+    case_id = str(uuid.uuid4())
+    path = TMP_DIR / f"{case_id}.png"
+    image_pil.save(path)
+    return case_id
+
+
+def load_case_image(case_id):
+    path = TMP_DIR / f"{case_id}.png"
+    if not path.exists():
+        return None
+    bgr = cv2.imread(str(path))
+    if bgr is None:
+        return None
+    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+
+
+def cleanup_case(case_id):
+    path = TMP_DIR / f"{case_id}.png"
+    if path.exists():
+        path.unlink()
+    state_path = _case_state_path(case_id)
+    if state_path.exists():
+        state_path.unlink()
 
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", app_name=APP_NAME)
+    message = request.args.get("message")
+    return render_template("index.html", app_name=APP_NAME, message=message)
 
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    file = request.files.get("image")
-    consent = request.form.get("consent")
+    # This endpoint handles the full flow (YOLO -> Segmentation -> Classification)
+    # using a single URL. The UI advances by posting `stage`, `case_id`, and `decision`.
 
-    if consent != "yes":
-        return render_template(
-            "index.html",
-            app_name=APP_NAME,
-            error="You must read and accept the User Notice & Consent before proceeding.",
+    stage = request.form.get("stage")
+    case_id = request.form.get("case_id")
+    decision = request.form.get("decision")
+    file = request.files.get("image")
+
+    # ----- Stage 0: new upload (no stage/case_id yet) -----
+    if file is not None and file.filename:
+        consent = request.form.get("consent")
+        if consent != "yes":
+            return render_template(
+                "index.html",
+                app_name=APP_NAME,
+                error="You must read and accept the User Notice & Consent before proceeding.",
+            )
+
+        image_pil = Image.open(file.stream).convert("RGB")
+        img_rgb = np.array(image_pil)
+        case_id = save_uploaded_image(image_pil)
+
+        # YOLO
+        yolo_box, yolo_conf, yolo_num_boxes, yolo_used_th, yolo_variant = predict_yolo(img_rgb)
+        img_area = img_rgb.shape[0] * img_rgb.shape[1]
+        yolo_area_pct = None
+        if yolo_box is not None:
+            yolo_area = max(0.0, yolo_box[2] - yolo_box[0]) * max(0.0, yolo_box[3] - yolo_box[1])
+            yolo_area_pct = float((yolo_area / img_area) * 100.0)
+
+        detection_overlay_uri = build_detection_plot(img_rgb, yolo_box)
+        input_preview_uri = "data:image/png;base64," + base64_encode(
+            cv2.imencode(".png", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))[1].tobytes()
         )
 
-    if file is None or file.filename == "":
-        return render_template("index.html", app_name=APP_NAME, error="Please upload an image.")
+        save_case_state(
+            case_id,
+            {
+                "yolo": {
+                    "box": yolo_box.tolist() if yolo_box is not None else None,
+                    "conf": float(yolo_conf),
+                    "num_boxes": int(yolo_num_boxes),
+                    "used_th": float(yolo_used_th) if yolo_used_th is not None else None,
+                    "variant": str(yolo_variant),
+                    "area_pct": float(yolo_area_pct) if yolo_area_pct is not None else None,
+                    "decision": None,
+                },
+                "segmentation": {"decision": None},
+            },
+        )
 
-    image_pil = Image.open(file.stream).convert("RGB")
-    img_rgb = np.array(image_pil)
+        return render_template(
+            "analyze.html",
+            app_name=APP_NAME,
+            stage="yolo",
+            case_id=case_id,
+            input_preview_uri=input_preview_uri,
+            detection_overlay_uri=detection_overlay_uri,
+            yolo_conf=yolo_conf,
+            yolo_num_boxes=yolo_num_boxes,
+            yolo_used_th=yolo_used_th,
+            yolo_variant=yolo_variant,
+            yolo_area_pct=yolo_area_pct,
+        )
 
-    gt_mask = None
-    gt_file = request.files.get("mask")
-    if gt_file is not None and gt_file.filename:
-        gt_pil = Image.open(gt_file.stream).convert("L")
-        gt_mask = np.array(gt_pil)
-        if gt_mask.shape[:2] != img_rgb.shape[:2]:
-            gt_mask = cv2.resize(gt_mask, (img_rgb.shape[1], img_rgb.shape[0]), interpolation=cv2.INTER_NEAREST)
+    # ----- Stage transitions (same URL) -----
+    if not case_id or not stage:
+        return redirect(url_for("index", message="Session expired. Please upload again."))
 
-    # YOLO
-    yolo_box, yolo_conf, yolo_num_boxes, yolo_used_th, yolo_variant = predict_yolo(img_rgb)
+    img_rgb = load_case_image(case_id)
+    if img_rgb is None:
+        return redirect(url_for("index", message="Image not found. Please upload again."))
 
-    # U-Net segmentation
-    seg_prob, seg_mask = predict_segmentation(img_rgb)
-    seg_bbox = mask_to_bbox(seg_mask)
-
-    # ResNet classification
-    cls_idx, cls_probs = predict_classification(img_rgb)
-
-    # Derived cross-model metrics
-    img_area = img_rgb.shape[0] * img_rgb.shape[1]
-    seg_area = int(np.sum(seg_mask > 0))
-    seg_area_pct = (seg_area / img_area) * 100.0
-    yolo_area_pct = None
-    box_mask_iou = None
-    if yolo_box is not None:
-        yolo_area = max(0.0, yolo_box[2] - yolo_box[0]) * max(0.0, yolo_box[3] - yolo_box[1])
-        yolo_area_pct = float((yolo_area / img_area) * 100.0)
-        if seg_bbox is not None:
-            box_mask_iou = float(compute_iou_box(yolo_box, seg_bbox))
-
-    seg_metrics = metrics_with_optional_gt(seg_mask, gt_mask)
-
+    state = load_case_state(case_id)
+    y = state.get("yolo", {}) if isinstance(state, dict) else {}
+    yolo_box = np.array(y["box"], dtype=float) if y.get("box") is not None else None
     detection_overlay_uri = build_detection_plot(img_rgb, yolo_box)
-    seg_overlay_uri = build_segmentation_overlay_plot(img_rgb, seg_mask)
-    seg_prob_uri = build_probability_plot(seg_prob)
-    cls_bar_uri = build_class_plot(cls_probs)
-
-    input_preview_uri = "data:image/png;base64," + base64_encode(cv2.imencode(".png", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))[1].tobytes())
-
-    return render_template(
-        "result.html",
-        app_name=APP_NAME,
-        input_preview_uri=input_preview_uri,
-        detection_overlay_uri=detection_overlay_uri,
-        seg_overlay_uri=seg_overlay_uri,
-        seg_prob_uri=seg_prob_uri,
-        cls_bar_uri=cls_bar_uri,
-        yolo_conf=yolo_conf,
-        yolo_num_boxes=yolo_num_boxes,
-        yolo_used_th=yolo_used_th,
-        yolo_variant=yolo_variant,
-        yolo_area_pct=yolo_area_pct,
-        box_mask_iou=box_mask_iou,
-        seg_area=seg_area,
-        seg_area_pct=seg_area_pct,
-        seg_metrics=seg_metrics,
-        cls_pred=CLASS_NAMES[cls_idx],
-        cls_prob_benign=float(cls_probs[0]),
-        cls_prob_malignant=float(cls_probs[1]),
+    input_preview_uri = "data:image/png;base64," + base64_encode(
+        cv2.imencode(".png", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))[1].tobytes()
     )
+
+    if stage == "yolo":
+        if decision == "decline":
+            save_case_state(case_id, {"yolo": {**y, "decision": "declined"}})
+            cleanup_case(case_id)
+            return redirect(url_for("index", message="YOLO result declined. Please upload a new image."))
+
+        save_case_state(case_id, {"yolo": {**y, "decision": "accepted"}})
+
+        seg_prob, seg_mask = predict_segmentation(img_rgb)
+        seg_overlay_uri = build_segmentation_overlay_plot(img_rgb, seg_mask)
+        seg_prob_uri = build_probability_plot(seg_prob)
+        img_area = img_rgb.shape[0] * img_rgb.shape[1]
+        seg_area = int(np.sum(seg_mask > 0))
+        seg_area_pct = (seg_area / img_area) * 100.0
+        save_case_state(
+            case_id,
+            {
+                "segmentation": {
+                    "area": int(seg_area),
+                    "area_pct": float(seg_area_pct),
+                    "decision": None,
+                }
+            },
+        )
+
+        return render_template(
+            "analyze.html",
+            app_name=APP_NAME,
+            stage="segmentation",
+            case_id=case_id,
+            input_preview_uri=input_preview_uri,
+            detection_overlay_uri=detection_overlay_uri,
+            yolo_conf=y.get("conf", 0.0),
+            yolo_num_boxes=y.get("num_boxes", 0),
+            yolo_used_th=y.get("used_th"),
+            yolo_variant=y.get("variant", "unknown"),
+            yolo_area_pct=y.get("area_pct"),
+            seg_overlay_uri=seg_overlay_uri,
+            seg_prob_uri=seg_prob_uri,
+            seg_area=seg_area,
+            seg_area_pct=seg_area_pct,
+        )
+
+    if stage == "segmentation":
+        seg_state = state.get("segmentation", {}) if isinstance(state, dict) else {}
+        if decision == "decline":
+            save_case_state(case_id, {"segmentation": {**seg_state, "decision": "declined"}})
+            cleanup_case(case_id)
+            return redirect(url_for("index", message="Segmentation result declined. Please upload a new image."))
+
+        save_case_state(case_id, {"segmentation": {**seg_state, "decision": "accepted"}})
+
+        seg_prob, seg_mask = predict_segmentation(img_rgb)
+        seg_overlay_uri = build_segmentation_overlay_plot(img_rgb, seg_mask)
+        seg_prob_uri = build_probability_plot(seg_prob)
+        img_area = img_rgb.shape[0] * img_rgb.shape[1]
+        seg_area = int(np.sum(seg_mask > 0))
+        seg_area_pct = (seg_area / img_area) * 100.0
+
+        cls_idx, cls_probs = predict_classification(img_rgb)
+        cls_bar_uri = build_class_plot(cls_probs)
+        roc = compute_roc()
+
+        cleanup_case(case_id)
+
+        return render_template(
+            "analyze.html",
+            app_name=APP_NAME,
+            stage="classification",
+            case_id=case_id,
+            input_preview_uri=input_preview_uri,
+            detection_overlay_uri=detection_overlay_uri,
+            yolo_conf=y.get("conf", 0.0),
+            yolo_num_boxes=y.get("num_boxes", 0),
+            yolo_used_th=y.get("used_th"),
+            yolo_variant=y.get("variant", "unknown"),
+            yolo_area_pct=y.get("area_pct"),
+            seg_overlay_uri=seg_overlay_uri,
+            seg_prob_uri=seg_prob_uri,
+            seg_area=seg_area,
+            seg_area_pct=seg_area_pct,
+            cls_bar_uri=cls_bar_uri,
+            cls_pred=CLASS_NAMES[cls_idx],
+            cls_prob_benign=float(cls_probs[0]),
+            cls_prob_malignant=float(cls_probs[1]),
+            roc_uri=roc.get("uri"),
+            roc_auc=roc.get("auc"),
+            roc_n=roc.get("n"),
+            roc_error=roc.get("error"),
+        )
+
+    return redirect(url_for("index", message="Unknown stage. Please upload again."))
+
+
 
 
 if __name__ == "__main__":

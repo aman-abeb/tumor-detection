@@ -164,7 +164,7 @@ label {
   padding: 8px 12px;
   font-size: 0.82rem;
   font-weight: 600;
-  background: linear-gradient(90deg, #2563eb, #4f46e5);
+  background: #2563eb;
   color: #ffffff;
   cursor: pointer;
   transition:
@@ -226,6 +226,15 @@ img {
   background: #fef2f2;
   color: #991b1b;
   border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.info {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
   padding: 10px;
   margin: 10px 0;
@@ -352,4 +361,30 @@ img {
   color: #64748b;
   font-size: 0.78rem;
   padding: 20px 12px 24px;
+}
+
+.decision-bar {
+  padding: 12px;
+}
+
+.decision-form {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.secondary-btn {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: #f8fafc;
 }

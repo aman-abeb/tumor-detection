@@ -1,0 +1,11 @@
+<div class="card metrics-card">
+  <h2>U-Net Segmentation</h2>
+  <div class="split-grid">
+    <img src="{{ seg_overlay_uri }}" alt="segmentation overlay" />
+    <img src="{{ seg_prob_uri }}" alt="segmentation probability heatmap" />
+  </div>
+  <div class="metrics-table">
+    <div class="metrics-row"><span>Estimated tumor area (pixels)</span><b>{{ seg_area }}</b></div>
+    <div class="metrics-row"><span>Estimated tumor area (% of image)</span><b>{{ "%.2f"|format(seg_area_pct) }}%</b></div>
+  </div>
+</div>

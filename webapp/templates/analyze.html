@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ app_name }} - Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+  {% include "components/topbar.html" %}
+
+  <div class="container">
+    {% include "components/input_image.html" %}
+
+    {% if stage in ["yolo", "segmentation", "classification"] %}
+      {% include "components/yolo_section.html" %}
+    {% endif %}
+
+    {% if stage in ["segmentation", "classification"] %}
+      {% include "components/segmentation_section.html" %}
+    {% endif %}
+
+    {% if stage == "classification" %}
+      {% include "components/classification_section.html" %}
+    {% endif %}
+
+    {% if stage == "yolo" %}
+      {% set accept_label = "Accept and Continue to Segmentation" %}
+      {% include "components/decision_bar.html" %}
+    {% elif stage == "segmentation" %}
+      {% set accept_label = "Accept and Continue to Classification" %}
+      {% include "components/decision_bar.html" %}
+    {% endif %}
+  </div>
+
+  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+</body>
+
+</html>
+

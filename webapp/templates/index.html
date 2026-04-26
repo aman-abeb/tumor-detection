@@ -32,6 +32,9 @@
     {% if error %}
     <div class="error">{{ error }}</div>
     {% endif %}
+    {% if message %}
+    <div class="info">{{ message }}</div>
+    {% endif %}
 
     <form method="post" action="/analyze" enctype="multipart/form-data" class="card upload-card">
       <h2>Start New Analysis</h2>
@@ -39,9 +42,6 @@
         <div class="form-panel">
           <label>Input Image <span class="muted">(required)</span></label>
           <input type="file" name="image" accept="image/*" required class="file-input" />
-
-          <label>Ground-Truth Mask <span class="muted">(optional, unlocks true Dice/IoU metrics)</span></label>
-          <input type="file" name="mask" accept="image/*" class="file-input" />
           <label class="consent-check">
             <input type="checkbox" name="consent" value="yes" required />
             <span>I have read and understood the information above and agree to proceed.</span>

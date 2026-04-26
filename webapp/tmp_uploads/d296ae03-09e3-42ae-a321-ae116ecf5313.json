@@ -1,0 +1,22 @@
+{
+  "case_id": "d296ae03-09e3-42ae-a321-ae116ecf5313",
+  "yolo": {
+    "box": [
+      210.0633544921875,
+      837.4957885742188,
+      614.7658081054688,
+      1078.23974609375
+    ],
+    "conf": 0.1637091040611267,
+    "num_boxes": 2,
+    "used_th": 0.1,
+    "variant": "original",
+    "area_pct": 8.165300369262695,
+    "decision": "accepted"
+  },
+  "segmentation": {
+    "area": 300094,
+    "area_pct": 25.150014750053636,
+    "decision": null
+  }
+}

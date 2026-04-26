@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ app_name }} - YOLO Review</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
+        <div><span class="brand-title">{{ app_name }}</span></div>
+      </div>
+      <a href="/" class="top-action">New Analysis</a>
+    </div>
+  </header>
+  <div class="container">
+
+    <div class="card">
+      <h2>Input Image</h2><img src="{{ input_preview_uri }}" class="input-preview" alt="input image" />
+    </div>
+
+    <div class="card metrics-card">
+      <h2>YOLO Detection</h2>
+      <div class="split-grid">
+        <img src="{{ detection_overlay_uri }}" alt="yolo detection" />
+        <div class="metrics-table">
+          <div class="metrics-row"><span>AI certainty (best confidence)</span><b>{{ "%.4f"|format(yolo_conf) }}</b>
+          </div>
+          <div class="metrics-row"><span>Detected suspicious regions</span><b>{{ yolo_num_boxes }}</b></div>
+          <div class="metrics-row"><span>Estimated suspicious area</span><b>{% if yolo_area_pct is not none %}{{
+              "%.2f"|format(yolo_area_pct) }}%{% else %}N/A{% endif %}</b></div>
+          <div class="metrics-row"><span>Technical threshold used</span><b>{% if yolo_used_th is not none %}{{
+              "%.3f"|format(yolo_used_th) }}{% else %}N/A{% endif %}</b></div>
+          <div class="metrics-row"><span>Image variant used</span><b>{{ yolo_variant }}</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="decision-bar card">
+      <form method="post" action="/analyze" class="decision-form">
+        <input type="hidden" name="case_id" value="{{ case_id }}" />
+        <input type="hidden" name="stage" value="yolo" />
+        <button type="submit" name="decision" value="decline" class="secondary-btn">Decline and Upload New
+          Image</button>
+        <button type="submit" name="decision" value="accept" style="margin-top: 0;" class="primary-btn">Accept and
+          Continue to Segmentation</button>
+      </form>
+    </div>
+  </div>
+  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+</body>
+
+</html>

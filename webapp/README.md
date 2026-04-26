@@ -2,7 +2,7 @@
 
 TumorSight 360 is a detailed medical imaging demo app that runs:
 
-- YOLO detection (`yolo26n.pt`)
+- YOLO detection (`best.pt`)
 - U-Net segmentation (`unet_busi.pth`)
 - ResNet18 classification (`resnet18_busi_cls.pth`)
 
@@ -69,7 +69,7 @@ Recommended env vars:
 ## Notes
 
 - The app expects model files in project root:
-  - `yolo26n.pt`
+  - `best.pt`
   - `unet_busi.pth`
   - `resnet18_busi_cls.pth`
 - For true segmentation quality metrics, upload a matching ground-truth mask.
