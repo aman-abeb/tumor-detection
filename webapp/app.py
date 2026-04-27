@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 
 
 APP_NAME = "TumorSight 360"
-BASE_DIR = Path(__file__).resolve().parents[1]
+# Resolve BASE_DIR from app.py location → one level up (project root)
+BASE_DIR = Path(__file__).resolve().parent.parent
 YOLO_PATH = BASE_DIR / "best.pt"
 UNET_PATH = BASE_DIR / "unet_busi.pth"
 CLS_PATH = BASE_DIR / "resnet18_busi_cls.pth"
@@ -27,7 +28,8 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMG_SIZE_SEG = 256
 IMG_SIZE_CLS = 224
 CLASS_NAMES = ["benign", "malignant"]
-TMP_DIR = BASE_DIR / "webapp" / "tmp_uploads"
+# tmp dir lives inside the webapp folder so it is always writable
+TMP_DIR = Path(__file__).resolve().parent / "tmp_uploads"
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
@@ -105,26 +107,49 @@ class UNet(nn.Module):
         return self.out(u1)
 
 
-def load_models():
-    if not YOLO_PATH.exists() or not UNET_PATH.exists() or not CLS_PATH.exists():
-        missing = [str(p.name) for p in [YOLO_PATH, UNET_PATH, CLS_PATH] if not p.exists()]
-        raise FileNotFoundError(f"Missing model files: {', '.join(missing)}")
-
-    yolo_model = YOLO(str(YOLO_PATH))
-
-    unet_model = UNet().to(DEVICE)
-    unet_model.load_state_dict(torch.load(UNET_PATH, map_location=DEVICE))
-    unet_model.eval()
-
-    cls_model = models.resnet18(weights=None)
-    cls_model.fc = nn.Linear(cls_model.fc.in_features, 2)
-    cls_model.load_state_dict(torch.load(CLS_PATH, map_location=DEVICE))
-    cls_model = cls_model.to(DEVICE)
-    cls_model.eval()
-    return yolo_model, unet_model, cls_model
+# ── Model registry ────────────────────────────────────────────────────────────
+# Models are loaded once on first request (lazy) so that a missing file returns
+# a clean 503 instead of crashing the gunicorn worker at startup.
+_models: dict = {}
+_model_error: str | None = None
 
 
-yolo_model, unet_model, cls_model = load_models()
+def _load_models_once() -> None:
+    """Load all three models into _models; set _model_error on failure."""
+    global _model_error
+    if _models or _model_error:
+        return  # already attempted
+
+    missing = [str(p.name) for p in [YOLO_PATH, UNET_PATH, CLS_PATH] if not p.exists()]
+    if missing:
+        _model_error = f"Missing model files: {', '.join(missing)}. BASE_DIR={BASE_DIR}"
+        return
+
+    try:
+        _models["yolo"] = YOLO(str(YOLO_PATH))
+
+        unet = UNet().to(DEVICE)
+        unet.load_state_dict(torch.load(UNET_PATH, map_location=DEVICE, weights_only=True))
+        unet.eval()
+        _models["unet"] = unet
+
+        cls = models.resnet18(weights=None)
+        cls.fc = nn.Linear(cls.fc.in_features, 2)
+        cls.load_state_dict(torch.load(CLS_PATH, map_location=DEVICE, weights_only=True))
+        cls = cls.to(DEVICE)
+        cls.eval()
+        _models["cls"] = cls
+    except Exception as exc:
+        _model_error = str(exc)
+        _models.clear()
+
+
+def _get_models():
+    _load_models_once()
+    if _model_error:
+        from flask import abort
+        abort(503, description=f"Model load failed: {_model_error}")
+    return _models["yolo"], _models["unet"], _models["cls"]
 
 
 def fig_to_data_uri(fig):
@@ -175,6 +200,7 @@ def make_enhanced_rgb(img_rgb):
 
 
 def predict_yolo(img_rgb):
+    yolo_model, _, _ = _get_models()
     thresholds = [0.25, 0.10, 0.03, 0.01, 0.003]
     variants = [
         ("original", img_rgb),
@@ -211,6 +237,7 @@ def predict_yolo(img_rgb):
 
 
 def predict_segmentation(img_rgb):
+    _, unet_model, _ = _get_models()
     resized = cv2.resize(img_rgb, (IMG_SIZE_SEG, IMG_SIZE_SEG), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255.0
     x = torch.from_numpy(resized.transpose(2, 0, 1)).unsqueeze(0).to(DEVICE)
     with torch.no_grad():
@@ -221,6 +248,7 @@ def predict_segmentation(img_rgb):
 
 
 def predict_classification(img_rgb):
+    _, _, cls_model = _get_models()
     img = cv2.resize(img_rgb, (IMG_SIZE_CLS, IMG_SIZE_CLS), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255.0
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -592,6 +620,13 @@ def analyze():
     return redirect(url_for("index", message="Unknown stage. Please upload again."))
 
 
+@app.route("/healthz", methods=["GET"])
+def healthz():
+    """Lightweight health-check used by deployment platforms."""
+    _load_models_once()
+    if _model_error:
+        return {"status": "error", "detail": _model_error, "base_dir": str(BASE_DIR)}, 503
+    return {"status": "ok", "device": DEVICE, "base_dir": str(BASE_DIR)}, 200
 
 
 if __name__ == "__main__":
