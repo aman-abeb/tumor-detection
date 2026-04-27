@@ -1,8 +1,10 @@
+# torch and torchvision are installed separately in the Dockerfile
+# with the CPU-only index URL to keep the image small.
+# Do NOT add them here or they will be reinstalled with full CUDA (~2 GB).
 flask
 numpy
-opencv-python
+opencv-python-headless
 matplotlib
 pillow
-torch
-torchvision
 ultralytics
+gunicorn
