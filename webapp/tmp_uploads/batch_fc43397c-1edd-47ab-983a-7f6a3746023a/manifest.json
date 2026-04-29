@@ -1,0 +1,187 @@
+{
+  "batch_id": "fc43397c-1edd-47ab-983a-7f6a3746023a",
+  "count": 20,
+  "skipped_extra_uploads": 0,
+  "items": [
+    {
+      "filename": "malignant (183).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (183).png",
+      "pred": "malignant",
+      "p_benign": 0.0001514027244411409,
+      "p_malignant": 0.9998486042022705,
+      "tile": "tile_000.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (251).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (251).png",
+      "pred": "benign",
+      "p_benign": 0.9907784461975098,
+      "p_malignant": 0.009221595712006092,
+      "tile": "tile_001.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (387).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (387).png",
+      "pred": "benign",
+      "p_benign": 0.9983832836151123,
+      "p_malignant": 0.0016167154535651207,
+      "tile": "tile_002.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (195).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (195).png",
+      "pred": "benign",
+      "p_benign": 0.9999889135360718,
+      "p_malignant": 1.1089042345702183e-05,
+      "tile": "tile_003.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (6).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (6).png",
+      "pred": "malignant",
+      "p_benign": 0.0005017119692638516,
+      "p_malignant": 0.9994982481002808,
+      "tile": "tile_004.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (108).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (108).png",
+      "pred": "benign",
+      "p_benign": 0.9989994168281555,
+      "p_malignant": 0.0010006178636103868,
+      "tile": "tile_005.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (61).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (61).png",
+      "pred": "benign",
+      "p_benign": 0.9710667729377747,
+      "p_malignant": 0.028933240100741386,
+      "tile": "tile_006.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (362).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (362).png",
+      "pred": "benign",
+      "p_benign": 0.999327540397644,
+      "p_malignant": 0.0006725217099301517,
+      "tile": "tile_007.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (340).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (340).png",
+      "pred": "benign",
+      "p_benign": 0.9995152950286865,
+      "p_malignant": 0.0004846695519518107,
+      "tile": "tile_008.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (194).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (194).png",
+      "pred": "benign",
+      "p_benign": 0.99979168176651,
+      "p_malignant": 0.00020834266615565866,
+      "tile": "tile_009.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (3).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (3).png",
+      "pred": "malignant",
+      "p_benign": 0.027678553014993668,
+      "p_malignant": 0.9723214507102966,
+      "tile": "tile_010.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (327).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (327).png",
+      "pred": "benign",
+      "p_benign": 0.9993143081665039,
+      "p_malignant": 0.0006857122061774135,
+      "tile": "tile_011.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (366).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (366).png",
+      "pred": "benign",
+      "p_benign": 0.9628349542617798,
+      "p_malignant": 0.03716501221060753,
+      "tile": "tile_012.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (1).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (1).png",
+      "pred": "benign",
+      "p_benign": 0.9973052740097046,
+      "p_malignant": 0.0026946673169732094,
+      "tile": "tile_013.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (81).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (81).png",
+      "pred": "malignant",
+      "p_benign": 0.052464183419942856,
+      "p_malignant": 0.9475357532501221,
+      "tile": "tile_014.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (168).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (168).png",
+      "pred": "malignant",
+      "p_benign": 1.2870995078628766e-06,
+      "p_malignant": 0.9999986886978149,
+      "tile": "tile_015.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (150).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (150).png",
+      "pred": "malignant",
+      "p_benign": 0.0005224904743954539,
+      "p_malignant": 0.9994775652885437,
+      "tile": "tile_016.png",
+      "ok": true
+    },
+    {
+      "filename": "malignant (145).png",
+      "dataset_path": "BUSI_Jpeg/malignant/malignant (145).png",
+      "pred": "malignant",
+      "p_benign": 0.2819099426269531,
+      "p_malignant": 0.7180900573730469,
+      "tile": "tile_017.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (27).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (27).png",
+      "pred": "benign",
+      "p_benign": 0.9999881982803345,
+      "p_malignant": 1.1825421097455546e-05,
+      "tile": "tile_018.png",
+      "ok": true
+    },
+    {
+      "filename": "benign (221).png",
+      "dataset_path": "BUSI_Jpeg/benign/benign (221).png",
+      "pred": "benign",
+      "p_benign": 0.9999834299087524,
+      "p_malignant": 1.6516956748091616e-05,
+      "tile": "tile_019.png",
+      "ok": true
+    }
+  ]
+}

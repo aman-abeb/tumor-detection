@@ -1,9 +1,377 @@
-<div class="card metrics-card">
-  <h2>U-Net Segmentation</h2>
-  <div class="split-grid">
-    <img src="{{ seg_overlay_uri }}" alt="segmentation overlay" />
-    <img src="{{ seg_prob_uri }}" alt="segmentation probability heatmap" />
+<div class="card metrics-card seg-card">
+  <h2>U-Net segmentation</h2>
+
+  <div id="seg-display-mode" class="seg-preview-stack">
+    <div class="seg-preview-head">
+      <div class="seg-preview-copy">
+        <span class="seg-preview-title">Predicted tumor mask</span>
+        <span class="seg-preview-subtitle">Semi-transparent overlay on your scan</span>
+      </div>
+      {% if stage == "segmentation" %}
+      <button type="button" id="edit-mask-btn" class="seg-refine-trigger">
+        <svg class="seg-refine-trigger-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 3a2.828 2.828 0 114 4L7 21l-4 1 1-4L17 3z" />
+        </svg>
+        Refine mask
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="seg-preview-shell">
+      <img src="{{ seg_overlay_uri }}" alt="U-Net segmentation mask overlay" class="seg-preview-image" loading="lazy" />
+    </div>
+
+    <div id="manual-edit-display" class="seg-manual-block" hidden>
+      <div class="seg-preview-head seg-preview-head--compact">
+        <div class="seg-preview-copy">
+          <span class="seg-preview-title">Refined mask</span>
+          <span class="seg-preview-subtitle">After your edits</span>
+        </div>
+      </div>
+      <div class="seg-preview-shell">
+        <img id="manual-overlay-img" src="" alt="Refined segmentation overlay" class="seg-preview-image" />
+      </div>
+    </div>
   </div>
+
+  {% if stage == "segmentation" %}
+  <div id="seg-edit-mode" class="seg-editor" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="seg-editor-title">
+    <div class="seg-editor-scrim"></div>
+    <div class="seg-editor-dialog">
+      <header class="seg-editor-top">
+        <div class="seg-editor-title-block">
+          <h3 id="seg-editor-title" class="seg-editor-title">Refine segmentation mask</h3>
+          <p class="seg-editor-lede">Paint to include tissue, erase to exclude. Pinch or use zoom for detail.</p>
+        </div>
+        <button type="button" id="edit-done-btn" class="seg-editor-done primary-btn">Done</button>
+      </header>
+
+      <div class="seg-editor-toolstrip">
+        <div class="seg-tool-group" role="toolbar" aria-label="Brush tools">
+          <button type="button" id="tool-draw" class="seg-tool seg-tool--active" title="Draw (add to mask)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 9L12 12l6-2z"/></svg>
+            <span>Draw</span>
+          </button>
+          <button type="button" id="tool-erase" class="seg-tool" title="Erase (remove from mask)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 20H7L3 16c-1-1-1-2.5 0-3.5l10-10c1-1 2.5-1 3.5 0l5 5c1 1 1 2.5 0 3.5L13 20"/><path d="M6 11l8 8"/></svg>
+            <span>Erase</span>
+          </button>
+        </div>
+        <div class="seg-tool-group seg-tool-zoom" role="toolbar" aria-label="Zoom">
+          <button type="button" id="tool-zoom-in" class="seg-tool-icon" aria-label="Zoom in">+</button>
+          <span id="zoom-pct-label" class="seg-zoom-readout">100%</span>
+          <button type="button" id="tool-zoom-out" class="seg-tool-icon" aria-label="Zoom out">−</button>
+          <button type="button" id="tool-reset" class="seg-tool-text" title="Reset zoom">Fit</button>
+        </div>
+        <div class="seg-brush-block">
+          <label class="seg-brush-label" for="brush-size">Brush</label>
+          <span id="brush-size-val" class="seg-brush-value">18</span>
+          <input type="range" id="brush-size" min="4" max="80" value="18" />
+        </div>
+      </div>
+
+      <div id="canvas-viewport" class="seg-canvas-viewport">
+        <div id="canvas-layers" class="canvas-layers-wrap">
+          <canvas id="bg-canvas"></canvas>
+          <canvas id="mask-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const editBtn = document.getElementById("edit-mask-btn");
+      const doneBtn = document.getElementById("edit-done-btn");
+      const overlay = document.getElementById("seg-edit-mode");
+      const scrim = document.getElementById("seg-editor-scrim");
+      if (!editBtn || !overlay || !doneBtn) return;
+
+      const rawMaskUri = "{{ raw_mask_uri }}";
+      const inputPreviewUri = "{{ input_preview_uri }}";
+
+      const DRAW = "rgba(6,182,212,0.92)";
+
+      const bgCanvas = document.getElementById("bg-canvas");
+      const maskCanvas = document.getElementById("mask-canvas");
+      const canvasViewport = document.getElementById("canvas-viewport");
+      const layersContainer = document.getElementById("canvas-layers");
+      const bgCtx = bgCanvas.getContext("2d", { willReadFrequently: true });
+      const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
+
+      let editorInitialized = false;
+      let isDrawing = false;
+      let currentTool = "draw";
+      let brushSize = parseInt(document.getElementById("brush-size").value, 10) || 18;
+      let scale = 1;
+
+      function getClient(ev) {
+        if (ev.touches && ev.touches[0])
+          return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+        return { x: ev.clientX, y: ev.clientY };
+      }
+
+      function getCoords(ev) {
+        const pt = getClient(ev);
+        const rect = maskCanvas.getBoundingClientRect();
+        const x = ((pt.x - rect.left) / rect.width) * maskCanvas.width;
+        const y = ((pt.y - rect.top) / rect.height) * maskCanvas.height;
+        return [x, y];
+      }
+
+      function colorizeMask() {
+        const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 127) {
+            data[i] = 6;
+            data[i + 1] = 182;
+            data[i + 2] = 232;
+            data[i + 3] = 235;
+          } else {
+            data[i + 3] = 0;
+          }
+        }
+        maskCtx.putImageData(imgData, 0, 0);
+        maskCtx.globalCompositeOperation = "source-over";
+        maskCtx.fillStyle = DRAW;
+        maskCtx.strokeStyle = DRAW;
+      }
+
+      function setTool(tool) {
+        currentTool = tool;
+        const drawBtn = document.getElementById("tool-draw");
+        const eraseBtn = document.getElementById("tool-erase");
+        if (!drawBtn || !eraseBtn) return;
+        drawBtn.classList.toggle("seg-tool--active", tool === "draw");
+        eraseBtn.classList.toggle("seg-tool--active", tool === "erase");
+        if (tool === "draw") {
+          maskCtx.globalCompositeOperation = "source-over";
+          maskCtx.strokeStyle = DRAW;
+          maskCtx.fillStyle = DRAW;
+        } else {
+          maskCtx.globalCompositeOperation = "destination-out";
+          maskCtx.strokeStyle = "rgba(255,255,255,1)";
+          maskCtx.fillStyle = "rgba(255,255,255,1)";
+        }
+      }
+
+      function fitViewport() {
+        const vw = canvasViewport.clientWidth - 48;
+        const vh = canvasViewport.clientHeight - 48;
+        const lw = layersContainer.offsetWidth;
+        const lh = layersContainer.offsetHeight;
+        if (!lw || !lh || !canvasViewport.clientWidth) {
+          setZoom(1);
+          return;
+        }
+        const rw = vw / lw;
+        const rh = vh / lh;
+        const s = Math.min(rw, rh, 1);
+        setZoom(Math.min(8, Math.max(0.2, s || 1)));
+      }
+
+      function initEditor() {
+        if (editorInitialized) return;
+        const bgImg = new Image();
+        const maskImg = new Image();
+        bgImg.crossOrigin = "anonymous";
+        maskImg.crossOrigin = "anonymous";
+        bgImg.onload = () => {
+          bgCanvas.width = bgImg.width;
+          bgCanvas.height = bgImg.height;
+          maskCanvas.width = bgImg.width;
+          maskCanvas.height = bgImg.height;
+          layersContainer.style.width = bgImg.width + "px";
+          layersContainer.style.height = bgImg.height + "px";
+          bgCtx.drawImage(bgImg, 0, 0);
+          maskImg.onload = () => {
+            maskCtx.drawImage(maskImg, 0, 0);
+            colorizeMask();
+            setTool("draw");
+            editorInitialized = true;
+            updateZoomLabel();
+            requestAnimationFrame(() => fitViewport());
+          };
+          maskImg.src = rawMaskUri;
+        };
+        bgImg.src = inputPreviewUri;
+      }
+
+      function openEditor() {
+        overlay.classList.add("seg-editor--open");
+        overlay.setAttribute("aria-hidden", "false");
+        document.body.classList.add("seg-editor-open");
+        initEditor();
+        setTimeout(() => doneBtn.focus(), 100);
+      }
+
+      function closeEditor() {
+        overlay.classList.remove("seg-editor--open");
+        overlay.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("seg-editor-open");
+      }
+
+      function updateZoomLabel() {
+        const label = document.getElementById("zoom-pct-label");
+        if (label) label.textContent = Math.round(scale * 100) + "%";
+      }
+
+      function setZoom(next) {
+        scale = Math.min(8, Math.max(0.2, next));
+        layersContainer.style.transform = "scale(" + scale + ")";
+        updateZoomLabel();
+      }
+
+      editBtn.onclick = () => openEditor();
+
+      document.addEventListener("keydown", (e) => {
+        if (!overlay.classList.contains("seg-editor--open")) return;
+        if (e.key === "Escape") {
+          e.preventDefault();
+          doneBtn.click();
+        }
+      });
+
+      doneBtn.onclick = () => {
+        if (!editorInitialized) {
+          closeEditor();
+          return;
+        }
+        closeEditor();
+
+        const combineCanvas = document.createElement("canvas");
+        combineCanvas.width = bgCanvas.width;
+        combineCanvas.height = bgCanvas.height;
+        const cCtx = combineCanvas.getContext("2d");
+        cCtx.drawImage(bgCanvas, 0, 0);
+        cCtx.globalAlpha = 0.32;
+        cCtx.drawImage(maskCanvas, 0, 0);
+        cCtx.globalAlpha = 1;
+
+        const manualDataUri = combineCanvas.toDataURL("image/png");
+
+        const manualDisplay = document.getElementById("manual-edit-display");
+        const manualImg = document.getElementById("manual-overlay-img");
+        if (manualDisplay && manualImg) {
+          manualImg.src = manualDataUri;
+          manualDisplay.hidden = false;
+        }
+      };
+
+      maskCanvas.style.touchAction = "none";
+
+      function pointerDown(e) {
+        if (!editorInitialized) return;
+        e.preventDefault();
+        try {
+          maskCanvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+        isDrawing = true;
+        setTool(currentTool);
+        const [x, y] = getCoords(e);
+        maskCtx.beginPath();
+        maskCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        maskCtx.fill();
+        maskCtx.beginPath();
+        maskCtx.moveTo(x, y);
+      }
+
+      function pointerMove(e) {
+        if (!isDrawing || !editorInitialized) return;
+        e.preventDefault();
+        const [x, y] = getCoords(e);
+        maskCtx.lineTo(x, y);
+        maskCtx.lineWidth = brushSize;
+        maskCtx.lineCap = "round";
+        maskCtx.lineJoin = "round";
+        maskCtx.stroke();
+        maskCtx.beginPath();
+        maskCtx.moveTo(x, y);
+      }
+
+      function pointerUp(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        try {
+          maskCanvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        isDrawing = false;
+        maskCtx.beginPath();
+      }
+
+      maskCanvas.addEventListener("pointerdown", pointerDown);
+      maskCanvas.addEventListener("pointermove", pointerMove);
+      maskCanvas.addEventListener("pointerup", pointerUp);
+      maskCanvas.addEventListener("pointerleave", pointerUp);
+      maskCanvas.addEventListener("pointercancel", pointerUp);
+
+      document.getElementById("tool-draw").onclick = () => setTool("draw");
+
+      document.getElementById("tool-erase").onclick = () => setTool("erase");
+
+      document.getElementById("brush-size").oninput = (e) => {
+        brushSize = parseInt(e.target.value, 10);
+        document.getElementById("brush-size-val").innerText = brushSize;
+      };
+
+      document.getElementById("tool-zoom-in").onclick = () =>
+        setZoom(scale * 1.2);
+      document.getElementById("tool-zoom-out").onclick = () =>
+        setZoom(scale / 1.2);
+      document.getElementById("tool-reset").onclick = () => fitViewport();
+
+      const forms = document.querySelectorAll("form.decision-form");
+      forms.forEach((form) => {
+        form.addEventListener("submit", function (e) {
+          const clickedBtn = document.activeElement;
+          if (clickedBtn && clickedBtn.value === "decline") return;
+          if (!editorInitialized) return;
+
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = maskCanvas.width;
+          exportCanvas.height = maskCanvas.height;
+          const eCtx = exportCanvas.getContext("2d");
+          eCtx.fillStyle = "#000";
+          eCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+          eCtx.drawImage(maskCanvas, 0, 0);
+
+          const imgData = eCtx.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
+          const data = imgData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const lum = Math.max(data[i], data[i + 1], data[i + 2]);
+            const a = data[i + 3];
+            const masked = a > 28 || lum > 20;
+            if (masked) {
+              data[i] = 255;
+              data[i + 1] = 255;
+              data[i + 2] = 255;
+            } else {
+              data[i] = 0;
+              data[i + 1] = 0;
+              data[i + 2] = 0;
+            }
+            data[i + 3] = 255;
+          }
+          eCtx.putImageData(imgData, 0, 0);
+
+          const dataUri = exportCanvas.toDataURL("image/png");
+
+          let hiddenInput = document.getElementById("edited_mask");
+          if (!hiddenInput) {
+            hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.name = "edited_mask";
+            hiddenInput.id = "edited_mask";
+            this.appendChild(hiddenInput);
+          }
+          hiddenInput.value = dataUri;
+        });
+      });
+    });
+  </script>
+  {% endif %}
+
   <div class="metrics-table">
     <div class="metrics-row"><span>Estimated tumor area (pixels)</span><b>{{ seg_area }}</b></div>
     <div class="metrics-row"><span>Estimated tumor area (% of image)</span><b>{{ "%.2f"|format(seg_area_pct) }}%</b></div>

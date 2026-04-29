@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
+  <title>{{ app_name }} — Batch test</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+  {% include "components/topbar.html" %}
+
+  <div class="container">
+    <div class="hero card card-hero">
+      <div class="hero-badge">Research &amp; evaluation</div>
+      <h1>Batch test</h1>
+      <p class="subtitle">
+        This page shows a fixed <strong>{{ grid_max }}-image</strong> grid (4&nbsp;×&nbsp;5). Tiles are produced <strong>offline</strong> by
+        <code class="batch-code">scripts/generate_static_batch.py</code> or the notebook cell in
+        <code class="batch-code">project.ipynb</code>. The app does not run inference here.
+      </p>
+    </div>
+
+    {% if manifest and manifest.get('error') == 'no_dataset_images' %}
+    <div class="error">
+      The last generator run found no images under <code>BUSI_Jpeg/benign</code> or <code>BUSI_Jpeg/malignant</code>. Add data
+      and rerun the script or notebook cell.
+    </div>
+    {% elif not has_tiles %}
+    <div class="info batch-static-info">
+      No gallery yet. From the project root, run
+      <code class="batch-code">python scripts/generate_static_batch.py</code> or execute the “Batch gallery” cell in
+      <code class="batch-code">project.ipynb</code>, then refresh this page.
+    </div>
+    {% endif %}
+
+    <div class="batch-static-board card">
+      <div class="batch-static-grid">
+        {% for cell in cells %}
+        <div class="batch-static-cell {% if cell.empty %}batch-static-cell--empty{% endif %}">
+          {% if not cell.empty %}
+          <div class="batch-static-cell-frame">
+            {% if cell.tile %}
+            <img
+              class="batch-static-cell-img"
+              src="{{ url_for('static', filename='batch_gallery/' + cell.tile) }}"
+              alt=""
+              loading="lazy"
+            />
+            {% endif %}
+          </div>
+          <div class="batch-static-cell-meta">
+            {% if cell.get('ok') %}
+            <span class="batch-card-pred batch-card-pred--{{ cell.pred }}">{{ cell.pred | capitalize }}</span>
+            {% if cell.get('p_benign') is not none and cell.get('p_malignant') is not none %}
+            <span class="batch-static-probs">B {{ '%.3f' | format(cell.p_benign) }} · M {{ '%.3f' | format(cell.p_malignant) }}</span>
+            {% endif %}
+            {% else %}
+            <span class="batch-card-err">{{ (cell.error or 'Error')[:80] }}{% if cell.error and cell.error|length > 80 %}…{% endif %}</span>
+            {% endif %}
+            {% if cell.filename %}
+            <span class="batch-static-fname" title="{{ cell.dataset_path or '' }}">{{ cell.filename }}</span>
+            {% endif %}
+          </div>
+          {% else %}
+          <span class="batch-static-placeholder">No tile</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+</body>
+
+</html>

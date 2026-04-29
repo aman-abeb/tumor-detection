@@ -1,7 +1,9 @@
 <div class="card metrics-card">
-  <h2>YOLO Detection</h2>
+  <h2>YOLO detection</h2>
   <div class="split-grid">
-    <img src="{{ detection_overlay_uri }}" alt="yolo detection" />
+    <div class="figure-frame">
+      <img src="{{ detection_overlay_uri }}" alt="YOLO detection overlay" />
+    </div>
     <div class="metrics-table">
       <div class="metrics-row"><span>AI certainty (best confidence)</span><b>{{ "%.4f"|format(yolo_conf) }}</b></div>
       <div class="metrics-row"><span>Detected suspicious regions</span><b>{{ yolo_num_boxes }}</b></div>

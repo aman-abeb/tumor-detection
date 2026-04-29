@@ -1,0 +1,167 @@
+{
+  "batch_id": "3337842a-434a-4d53-a106-b58e5051f9f7",
+  "count": 20,
+  "skipped_extra_uploads": 10,
+  "items": [
+    {
+      "filename": "benign_2.png",
+      "pred": "benign",
+      "p_benign": 0.9996017813682556,
+      "p_malignant": 0.00039828295120969415,
+      "tile": "tile_000.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_3.png",
+      "pred": "benign",
+      "p_benign": 0.9999425411224365,
+      "p_malignant": 5.744782538386062e-05,
+      "tile": "tile_001.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_4.png",
+      "pred": "benign",
+      "p_benign": 0.9992958307266235,
+      "p_malignant": 0.0007041451754048467,
+      "tile": "tile_002.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_5.png",
+      "pred": "benign",
+      "p_benign": 0.998299777507782,
+      "p_malignant": 0.0017002627719193697,
+      "tile": "tile_003.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_6.png",
+      "pred": "benign",
+      "p_benign": 0.9967875480651855,
+      "p_malignant": 0.0032124400604516268,
+      "tile": "tile_004.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_8.png",
+      "pred": "benign",
+      "p_benign": 0.9999444484710693,
+      "p_malignant": 5.557572148973122e-05,
+      "tile": "tile_005.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_9.png",
+      "pred": "benign",
+      "p_benign": 0.9999711513519287,
+      "p_malignant": 2.886980837502051e-05,
+      "tile": "tile_006.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_10.png",
+      "pred": "benign",
+      "p_benign": 0.9993330836296082,
+      "p_malignant": 0.000666891981381923,
+      "tile": "tile_007.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_11.png",
+      "pred": "benign",
+      "p_benign": 0.9978988170623779,
+      "p_malignant": 0.0021011540666222572,
+      "tile": "tile_008.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_12.png",
+      "pred": "benign",
+      "p_benign": 0.9998637437820435,
+      "p_malignant": 0.00013629524619318545,
+      "tile": "tile_009.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_13.png",
+      "pred": "benign",
+      "p_benign": 0.9999676942825317,
+      "p_malignant": 3.2307911169482395e-05,
+      "tile": "tile_010.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_16.png",
+      "pred": "benign",
+      "p_benign": 0.9997566342353821,
+      "p_malignant": 0.0002434182388242334,
+      "tile": "tile_011.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_17.png",
+      "pred": "benign",
+      "p_benign": 0.9971504807472229,
+      "p_malignant": 0.0028495925944298506,
+      "tile": "tile_012.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_20.png",
+      "pred": "benign",
+      "p_benign": 0.9996004700660706,
+      "p_malignant": 0.0003995561564806849,
+      "tile": "tile_013.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_21.png",
+      "pred": "benign",
+      "p_benign": 0.999974250793457,
+      "p_malignant": 2.569571734056808e-05,
+      "tile": "tile_014.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_24.png",
+      "pred": "benign",
+      "p_benign": 0.9990880489349365,
+      "p_malignant": 0.0009119805181398988,
+      "tile": "tile_015.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_26.png",
+      "pred": "benign",
+      "p_benign": 0.998767614364624,
+      "p_malignant": 0.001232396811246872,
+      "tile": "tile_016.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_27.png",
+      "pred": "benign",
+      "p_benign": 0.9999881982803345,
+      "p_malignant": 1.1825421097455546e-05,
+      "tile": "tile_017.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_28.png",
+      "pred": "benign",
+      "p_benign": 0.9993195533752441,
+      "p_malignant": 0.0006804732838645577,
+      "tile": "tile_018.png",
+      "ok": true
+    },
+    {
+      "filename": "benign_29.png",
+      "pred": "benign",
+      "p_benign": 0.9990567564964294,
+      "p_malignant": 0.0009432426304556429,
+      "tile": "tile_019.png",
+      "ok": true
+    }
+  ]
+}

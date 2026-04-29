@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
   <title>{{ app_name }} - Analysis</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
@@ -12,6 +13,7 @@
   {% include "components/topbar.html" %}
 
   <div class="container">
+    {% include "components/analysis_steps.html" %}
     {% include "components/input_image.html" %}
 
     {% if stage in ["yolo", "segmentation", "classification"] %}

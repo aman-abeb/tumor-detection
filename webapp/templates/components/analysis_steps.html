@@ -1,0 +1,24 @@
+<nav class="analysis-steps" aria-label="Analysis pipeline progress">
+  <ol class="analysis-steps__list">
+    <li class="analysis-steps__step analysis-steps__step--done">
+      <span class="analysis-steps__mark" aria-hidden="true">✓</span>
+      <span class="analysis-steps__text">Upload</span>
+    </li>
+    <li
+      class="analysis-steps__step {% if stage == 'yolo' %}analysis-steps__step--current{% elif stage in ['segmentation', 'classification'] %}analysis-steps__step--done{% else %}analysis-steps__step--pending{% endif %}"
+    >
+      <span class="analysis-steps__num">2</span>
+      <span class="analysis-steps__text">YOLO detection</span>
+    </li>
+    <li
+      class="analysis-steps__step {% if stage == 'segmentation' %}analysis-steps__step--current{% elif stage == 'classification' %}analysis-steps__step--done{% else %}analysis-steps__step--pending{% endif %}"
+    >
+      <span class="analysis-steps__num">3</span>
+      <span class="analysis-steps__text">U-Net segmentation</span>
+    </li>
+    <li class="analysis-steps__step {% if stage == 'classification' %}analysis-steps__step--current{% else %}analysis-steps__step--pending{% endif %}">
+      <span class="analysis-steps__num">4</span>
+      <span class="analysis-steps__text">Classification</span>
+    </li>
+  </ol>
+</nav>

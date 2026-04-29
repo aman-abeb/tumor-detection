@@ -4,29 +4,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
   <title>{{ app_name }} - Classification Report</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
-        <div><span class="brand-title">{{ app_name }}</span></div>
-      </div>
-      <a href="/" class="top-action">New Analysis</a>
-    </div>
-  </header>
+  {% include "components/topbar.html" %}
   <div class="container">
     <div class="card">
-      <h2>Input Image</h2><img src="{{ input_preview_uri }}" class="input-preview" alt="input image" />
+      <h2>Input image</h2>
+      <img src="{{ input_preview_uri }}" class="input-preview" alt="Input image" />
     </div>
 
     <div class="card metrics-card">
-      <h2>YOLO Detection</h2>
+      <h2>YOLO detection</h2>
       <div class="split-grid">
-        <img src="{{ detection_overlay_uri }}" alt="yolo detection" />
+        <div class="figure-frame"><img src="{{ detection_overlay_uri }}" alt="YOLO overlay" /></div>
         <div class="metrics-table">
           <div class="metrics-row"><span>AI certainty (best confidence)</span><b>{{ "%.4f"|format(yolo_conf) }}</b>
           </div>
@@ -41,10 +35,9 @@
     </div>
 
     <div class="card metrics-card">
-      <h2>U-Net Segmentation</h2>
-      <div class="split-grid">
-        <img src="{{ seg_overlay_uri }}" alt="segmentation overlay" />
-        <img src="{{ seg_prob_uri }}" alt="segmentation probability heatmap" />
+      <h2>U-Net segmentation</h2>
+      <div class="seg-static-preview">
+        <img src="{{ seg_overlay_uri }}" alt="U-Net segmentation mask overlay" loading="lazy" />
       </div>
       <div class="metrics-table">
         <div class="metrics-row"><span>Estimated tumor area (pixels)</span><b>{{ seg_area }}</b></div>
@@ -54,7 +47,7 @@
     </div>
 
     <div class="card metrics-card">
-      <h2>Classification Outcome</h2>
+      <h2>Classification outcome</h2>
       <div class="split-grid">
         <div class="metrics-table">
           <div class="metrics-row"><span>Predicted category</span><b>{{ cls_pred }}</b></div>
@@ -62,7 +55,7 @@
           <div class="metrics-row"><span>Malignant probability</span><b>{{ "%.4f"|format(cls_prob_malignant) }}</b>
           </div>
         </div>
-        <img src="{{ cls_bar_uri }}" alt="classification probability chart" />
+        <div class="figure-frame"><img src="{{ cls_bar_uri }}" alt="Classification probabilities" /></div>
       </div>
     </div>
   </div>

@@ -4,28 +4,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
   <title>{{ app_name }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
-        <div>
-          <span class="brand-title">{{ app_name }}</span>
-        </div>
-      </div>
-      <a href="/" class="top-action">New Analysis</a>
-    </div>
-  </header>
+  {% include "components/topbar.html" %}
   <div class="container">
-    <div class="hero card">
+    <div class="hero card card-hero">
+      <div class="hero-badge">Research &amp; education</div>
       <h1>{{ app_name }}</h1>
       <p class="subtitle">
-        Upload a tumor X-ray/ultrasound image and get a detailed multi-model report with YOLO detection, U-Net
-        segmentation, and ResNet18 classification.
+        Upload a tumor X-ray or ultrasound image for a step-by-step report: YOLO detection, U-Net segmentation, and
+        ResNet18 classification—with review at each stage.
       </p>
     </div>
 
@@ -37,7 +29,7 @@
     {% endif %}
 
     <form method="post" action="/analyze" enctype="multipart/form-data" class="card upload-card">
-      <h2>Start New Analysis</h2>
+      <h2>Start new analysis</h2>
       <div class="form-consent-grid">
         <div class="form-panel">
           <label>Input Image <span class="muted">(required)</span></label>
@@ -83,7 +75,7 @@
         </div>
       </div>
 
-      <button type="submit" class="primary-btn">Analyze Tumor</button>
+      <button type="submit" class="primary-btn">Analyze image</button>
     </form>
   </div>
   <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>

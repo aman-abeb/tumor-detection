@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import uuid
 from pathlib import Path
@@ -32,8 +33,129 @@ CLASS_NAMES = ["benign", "malignant"]
 TMP_DIR = Path(__file__).resolve().parent / "tmp_uploads"
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "12"))
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB upload
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+
+# Static batch gallery: webapp/static/batch_gallery/manifest.json + tile_*.png — built by scripts/generate_static_batch.py (or project.ipynb cell)
+BATCH_GRID_MAX = 20
+BATCH_MAX_IMAGES = BATCH_GRID_MAX  # alias for scripts/notebook that generate static gallery tiles
+
+STATIC_BATCH_GALLERY_DIR = Path(__file__).resolve().parent / "static" / "batch_gallery"
+
+
+def _load_static_batch_manifest() -> dict | None:
+    p = STATIC_BATCH_GALLERY_DIR / "manifest.json"
+    if not p.is_file():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _batch_gallery_cells(manifest: dict | None) -> list[dict]:
+    """Twenty cells (4x5): real items first, then placeholders."""
+    items = []
+    if manifest and isinstance(manifest.get("items"), list):
+        items = manifest["items"][:BATCH_GRID_MAX]
+    cells = []
+    for i in range(BATCH_GRID_MAX):
+        if i < len(items):
+            cell = dict(items[i])
+            cell["empty"] = False
+            cells.append(cell)
+        else:
+            cells.append({"empty": True})
+    return cells
+
+
+def _truncate_middle(s: str, max_len: int = 32) -> str:
+    s = s or ""
+    if len(s) <= max_len:
+        return s
+    edge = max(1, (max_len // 2) - 2)
+    return f"{s[:edge]}…{s[-edge:]}"
+
+
+def _tile_bgr_from_result(
+    img_rgb: np.ndarray,
+    seg_mask: np.ndarray,
+    display_name: str,
+    pred_label: str,
+    p_benign: float,
+    p_malignant: float,
+) -> np.ndarray:
+    """Return a BGR image (OpenCV) for saving as PNG tile."""
+    vis = np.ascontiguousarray(img_rgb, dtype=np.uint8)
+    m = (seg_mask > 0).astype(np.uint8) * 255
+    seg_col = np.zeros_like(vis)
+    seg_col[:, :, 0] = m
+    vis = cv2.addWeighted(vis, 1.0, seg_col, 0.30, 0)
+
+    h, w = vis.shape[:2]
+    max_side = 384
+    scale = min(max_side / max(h, w), 1.0)
+    nh = max(32, int(round(h * scale)))
+    nw = max(32, int(round(w * scale)))
+    vis_rs = cv2.resize(vis, (nw, nh), interpolation=cv2.INTER_AREA)
+
+    banner_h = 64
+    pad_bgr = (248, 250, 252)
+    canvas_bgr = np.zeros((nh + banner_h, nw, 3), dtype=np.uint8)
+    canvas_bgr[:] = pad_bgr
+
+    rgb_tile = cv2.cvtColor(vis_rs, cv2.COLOR_RGB2BGR)
+    canvas_bgr[:nh, :nw] = rgb_tile
+
+    name_line = _truncate_middle(display_name, 36)
+    line2 = f"{pred_label.capitalize()}  ·  B {p_benign:.3f}  ·  M {p_malignant:.3f}"
+    cv2.putText(
+        canvas_bgr,
+        name_line,
+        (10, nh + 24),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.48,
+        (40, 55, 70),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        canvas_bgr,
+        line2,
+        (10, nh + 48),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.48,
+        (15, 85, 120),
+        1,
+        cv2.LINE_AA,
+    )
+    return canvas_bgr
+
+
+def _tile_error_bgr(display_name: str, err_short: str) -> np.ndarray:
+    h, w = 280, 380
+    im = np.zeros((h, w, 3), dtype=np.uint8)
+    im[:] = (246, 240, 235)
+    txt = (err_short or "Unknown error").replace("\n", " ")[:132]
+    cv2.putText(
+        im,
+        "Error",
+        (16, 36),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.75,
+        (40, 40, 200),
+        2,
+        cv2.LINE_AA,
+    )
+    cv2.putText(im, _truncate_middle(display_name, 34), (16, 68), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (55, 55, 80), 1, cv2.LINE_AA)
+    y = 100
+    for i in range(0, len(txt), 44):
+        cv2.putText(im, txt[i : i + 44], (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (80, 80, 105), 1, cv2.LINE_AA)
+        y += 20
+        if y > h - 24:
+            break
+    return im
 
 
 def _case_state_path(case_id: str) -> Path:
@@ -267,6 +389,19 @@ def build_detection_plot(img_rgb, yolo_box):
     if yolo_box is not None:
         x1, y1, x2, y2 = yolo_box.astype(int)
         cv2.rectangle(vis, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        
+        # Add label
+        label = "Tumor"
+        (text_w, text_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+        
+        # Ensure the label doesn't go off the top of the image
+        label_y1 = max(0, y1 - text_h - 10)
+        label_y2 = label_y1 + text_h + 10
+        
+        # Draw background rectangle for text
+        cv2.rectangle(vis, (x1, label_y1), (x1 + text_w + 10, label_y2), (255, 0, 0), -1)
+        # Draw text
+        cv2.putText(vis, label, (x1 + 5, label_y2 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.imshow(vis)
@@ -285,15 +420,6 @@ def build_segmentation_overlay_plot(img_rgb, seg_mask):
     ax.imshow(vis)
     ax.set_title("U-Net Segmentation Overlay")
     ax.axis("off")
-    return fig_to_data_uri(fig)
-
-
-def build_probability_plot(seg_prob):
-    fig, ax = plt.subplots(figsize=(6, 6))
-    im = ax.imshow(seg_prob, cmap="magma")
-    ax.set_title("U-Net Probability Heatmap")
-    ax.axis("off")
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     return fig_to_data_uri(fig)
 
 
@@ -534,9 +660,12 @@ def analyze():
 
         save_case_state(case_id, {"yolo": {**y, "decision": "accepted"}})
 
-        seg_prob, seg_mask = predict_segmentation(img_rgb)
+        _, seg_mask = predict_segmentation(img_rgb)
         seg_overlay_uri = build_segmentation_overlay_plot(img_rgb, seg_mask)
-        seg_prob_uri = build_probability_plot(seg_prob)
+        
+        _, mask_buf = cv2.imencode(".png", seg_mask)
+        raw_mask_uri = "data:image/png;base64," + base64_encode(mask_buf.tobytes())
+
         img_area = img_rgb.shape[0] * img_rgb.shape[1]
         seg_area = int(np.sum(seg_mask > 0))
         seg_area_pct = (seg_area / img_area) * 100.0
@@ -564,7 +693,7 @@ def analyze():
             yolo_variant=y.get("variant", "unknown"),
             yolo_area_pct=y.get("area_pct"),
             seg_overlay_uri=seg_overlay_uri,
-            seg_prob_uri=seg_prob_uri,
+            raw_mask_uri=raw_mask_uri,
             seg_area=seg_area,
             seg_area_pct=seg_area_pct,
         )
@@ -578,9 +707,22 @@ def analyze():
 
         save_case_state(case_id, {"segmentation": {**seg_state, "decision": "accepted"}})
 
-        seg_prob, seg_mask = predict_segmentation(img_rgb)
+        edited_mask_data = request.form.get("edited_mask")
+        if edited_mask_data:
+            import base64
+            header, encoded = edited_mask_data.split(",", 1)
+            mask_bytes = base64.b64decode(encoded)
+            np_arr = np.frombuffer(mask_bytes, np.uint8)
+            mask_img = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
+            seg_mask = (mask_img > 127).astype(np.uint8) * 255
+        else:
+            _, seg_mask = predict_segmentation(img_rgb)
+
         seg_overlay_uri = build_segmentation_overlay_plot(img_rgb, seg_mask)
-        seg_prob_uri = build_probability_plot(seg_prob)
+        
+        _, mask_buf = cv2.imencode(".png", seg_mask)
+        raw_mask_uri = "data:image/png;base64," + base64_encode(mask_buf.tobytes())
+
         img_area = img_rgb.shape[0] * img_rgb.shape[1]
         seg_area = int(np.sum(seg_mask > 0))
         seg_area_pct = (seg_area / img_area) * 100.0
@@ -604,7 +746,7 @@ def analyze():
             yolo_variant=y.get("variant", "unknown"),
             yolo_area_pct=y.get("area_pct"),
             seg_overlay_uri=seg_overlay_uri,
-            seg_prob_uri=seg_prob_uri,
+            raw_mask_uri=raw_mask_uri,
             seg_area=seg_area,
             seg_area_pct=seg_area_pct,
             cls_bar_uri=cls_bar_uri,
@@ -618,6 +760,23 @@ def analyze():
         )
 
     return redirect(url_for("index", message="Unknown stage. Please upload again."))
+
+
+@app.route("/batch-test")
+def batch_test():
+    """Static tiles + manifest produced offline (scripts/generate_static_batch.py or project.ipynb)."""
+    raw_manifest = _load_static_batch_manifest()
+    manifest = raw_manifest if isinstance(raw_manifest, dict) else {}
+    cells = _batch_gallery_cells(manifest)
+    has_tiles = any(not c.get("empty") for c in cells)
+    return render_template(
+        "batch_test.html",
+        app_name=APP_NAME,
+        manifest=manifest,
+        cells=cells,
+        has_tiles=has_tiles,
+        grid_max=BATCH_GRID_MAX,
+    )
 
 
 @app.route("/healthz", methods=["GET"])

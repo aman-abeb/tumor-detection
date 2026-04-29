@@ -4,37 +4,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
   <title>{{ app_name }} - Results</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
-        <div>
-          <span class="brand-title">{{ app_name }}</span>
-        </div>
-      </div>
-      <a href="/" class="top-action">New Analysis</a>
-    </div>
-  </header>
+  {% include "components/topbar.html" %}
   <div class="container">
-    <div class="hero card">
-      <h1>{{ app_name }} - Analysis Report</h1>
+    <div class="hero card card-hero">
+      <div class="hero-badge">Final report</div>
+      <h1>Analysis report</h1>
       <a href="/" class="back-link">Upload another image</a>
     </div>
 
     <div class="card">
-      <h2>Input Image</h2>
-      <img src="{{ input_preview_uri }}" alt="input image" class="input-preview" />
+      <h2>Input image</h2>
+      <img src="{{ input_preview_uri }}" alt="Input image" class="input-preview" />
     </div>
 
     <div class="card metrics-card">
-      <h2>YOLO Detection</h2>
+      <h2>YOLO detection</h2>
       <div class="split-grid">
-        <img src="{{ detection_overlay_uri }}" alt="overlay figure" />
+        <div class="figure-frame"><img src="{{ detection_overlay_uri }}" alt="YOLO overlay" /></div>
         <div class="metrics-table">
           <div class="metrics-row"><span>Best Detection Confidence</span><b>{{ "%.4f"|format(yolo_conf) }}</b></div>
           <div class="metrics-row"><span>Used Confidence Threshold</span><b>{% if yolo_used_th is not none %}{{
@@ -50,10 +42,9 @@
     </div>
 
     <div class="card metrics-card">
-      <h2>U-Net Segmentation</h2>
-      <div class="split-grid">
-        <img src="{{ seg_overlay_uri }}" alt="segmentation overlay" />
-        <img src="{{ seg_prob_uri }}" alt="segmentation probability map" />
+      <h2>U-Net segmentation</h2>
+      <div class="seg-static-preview">
+        <img src="{{ seg_overlay_uri }}" alt="U-Net segmentation mask overlay" loading="lazy" />
       </div>
       <div class="metrics-table">
         <div class="metrics-row"><span>Segmented Tumor Area (pixels)</span><b>{{ seg_area }}</b></div>
@@ -71,15 +62,15 @@
     </div>
 
     <div class="card metrics-card">
-      <h2>ResNet18 Classification</h2>
+      <h2>ResNet18 classification</h2>
       <div class="split-grid">
         <div class="metrics-table">
-          <div class="metrics-row"><span>Predicted Class</span><b>{{ cls_pred }}</b></div>
-          <div class="metrics-row"><span>Benign Probability</span><b>{{ "%.4f"|format(cls_prob_benign) }}</b></div>
-          <div class="metrics-row"><span>Malignant Probability</span><b>{{ "%.4f"|format(cls_prob_malignant) }}</b>
+          <div class="metrics-row"><span>Predicted class</span><b>{{ cls_pred }}</b></div>
+          <div class="metrics-row"><span>Benign probability</span><b>{{ "%.4f"|format(cls_prob_benign) }}</b></div>
+          <div class="metrics-row"><span>Malignant probability</span><b>{{ "%.4f"|format(cls_prob_malignant) }}</b>
           </div>
         </div>
-        <img src="{{ cls_bar_uri }}" alt="classification probabilities" />
+        <div class="figure-frame"><img src="{{ cls_bar_uri }}" alt="Classification probabilities" /></div>
       </div>
     </div>
   </div>

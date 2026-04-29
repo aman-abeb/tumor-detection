@@ -4,30 +4,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0369a1" />
   <title>{{ app_name }} - YOLO Review</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="brand-logo" width="40" height="40" />
-        <div><span class="brand-title">{{ app_name }}</span></div>
-      </div>
-      <a href="/" class="top-action">New Analysis</a>
-    </div>
-  </header>
+  {% include "components/topbar.html" %}
   <div class="container">
 
     <div class="card">
-      <h2>Input Image</h2><img src="{{ input_preview_uri }}" class="input-preview" alt="input image" />
+      <h2>Input image</h2>
+      <img src="{{ input_preview_uri }}" class="input-preview" alt="Input image" />
     </div>
 
     <div class="card metrics-card">
-      <h2>YOLO Detection</h2>
+      <h2>YOLO detection</h2>
       <div class="split-grid">
-        <img src="{{ detection_overlay_uri }}" alt="yolo detection" />
+        <div class="figure-frame"><img src="{{ detection_overlay_uri }}" alt="YOLO overlay" /></div>
         <div class="metrics-table">
           <div class="metrics-row"><span>AI certainty (best confidence)</span><b>{{ "%.4f"|format(yolo_conf) }}</b>
           </div>
@@ -45,10 +39,8 @@
       <form method="post" action="/analyze" class="decision-form">
         <input type="hidden" name="case_id" value="{{ case_id }}" />
         <input type="hidden" name="stage" value="yolo" />
-        <button type="submit" name="decision" value="decline" class="secondary-btn">Decline and Upload New
-          Image</button>
-        <button type="submit" name="decision" value="accept" style="margin-top: 0;" class="primary-btn">Accept and
-          Continue to Segmentation</button>
+        <button type="submit" name="decision" value="decline" class="secondary-btn">Decline and upload new image</button>
+        <button type="submit" name="decision" value="accept" class="primary-btn">Accept and continue to segmentation</button>
       </form>
     </div>
   </div>
