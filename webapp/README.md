@@ -1,6 +1,6 @@
-# TumorSight 360 (Flask App)
+# TumorSight (Flask App)
 
-TumorSight 360 is a detailed medical imaging demo app that runs:
+TumorSight is a detailed medical imaging demo app that runs:
 
 - YOLO detection (`best.pt`)
 - U-Net segmentation (`unet_busi.pth`)

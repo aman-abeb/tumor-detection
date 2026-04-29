@@ -1,0 +1,186 @@
+{
+  "batch_id": "d4d5c517-fe62-4180-9a5e-b519c8a037ad",
+  "count": 20,
+  "items": [
+    {
+      "ok": true,
+      "filename": "benign (1).png",
+      "tile_idx": 0,
+      "detected": true,
+      "conf": 0.9442631602287292,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (2).png",
+      "tile_idx": 1,
+      "detected": true,
+      "conf": 0.9881165027618408,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (3).png",
+      "tile_idx": 2,
+      "detected": true,
+      "conf": 0.9922004342079163,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (4).png",
+      "tile_idx": 3,
+      "detected": true,
+      "conf": 0.9567888379096985,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (5).png",
+      "tile_idx": 4,
+      "detected": true,
+      "conf": 0.9568057656288147,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (6).png",
+      "tile_idx": 5,
+      "detected": true,
+      "conf": 0.9757111072540283,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (7).png",
+      "tile_idx": 6,
+      "detected": true,
+      "conf": 0.9011594653129578,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (8).png",
+      "tile_idx": 7,
+      "detected": true,
+      "conf": 0.7290136218070984,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (9).png",
+      "tile_idx": 8,
+      "detected": true,
+      "conf": 0.9780398011207581,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (10).png",
+      "tile_idx": 9,
+      "detected": true,
+      "conf": 0.9642804265022278,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (11).png",
+      "tile_idx": 10,
+      "detected": true,
+      "conf": 0.9775739312171936,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (12).png",
+      "tile_idx": 11,
+      "detected": true,
+      "conf": 0.9614914655685425,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (13).png",
+      "tile_idx": 12,
+      "detected": true,
+      "conf": 0.9430946111679077,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (14).png",
+      "tile_idx": 13,
+      "detected": true,
+      "conf": 0.9365837574005127,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (15).png",
+      "tile_idx": 14,
+      "detected": true,
+      "conf": 0.93503338098526,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (16).png",
+      "tile_idx": 15,
+      "detected": true,
+      "conf": 0.9091275334358215,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (17).png",
+      "tile_idx": 16,
+      "detected": true,
+      "conf": 0.9079616069793701,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (18).png",
+      "tile_idx": 17,
+      "detected": true,
+      "conf": 0.9452507495880127,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (19).png",
+      "tile_idx": 18,
+      "detected": true,
+      "conf": 0.9502789378166199,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (20).png",
+      "tile_idx": 19,
+      "detected": true,
+      "conf": 0.9053756594657898,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    }
+  ]
+}

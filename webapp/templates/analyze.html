@@ -17,28 +17,27 @@
     {% include "components/input_image.html" %}
 
     {% if stage in ["yolo", "segmentation", "classification"] %}
-      {% include "components/yolo_section.html" %}
+    {% include "components/yolo_section.html" %}
     {% endif %}
 
     {% if stage in ["segmentation", "classification"] %}
-      {% include "components/segmentation_section.html" %}
+    {% include "components/segmentation_section.html" %}
     {% endif %}
 
     {% if stage == "classification" %}
-      {% include "components/classification_section.html" %}
+    {% include "components/classification_section.html" %}
     {% endif %}
 
     {% if stage == "yolo" %}
-      {% set accept_label = "Accept and Continue to Segmentation" %}
-      {% include "components/decision_bar.html" %}
+    {% set accept_label = "Accept and Continue to Segmentation" %}
+    {% include "components/decision_bar.html" %}
     {% elif stage == "segmentation" %}
-      {% set accept_label = "Accept and Continue to Classification" %}
-      {% include "components/decision_bar.html" %}
+    {% set accept_label = "Accept and Continue to Classification" %}
+    {% include "components/decision_bar.html" %}
     {% endif %}
   </div>
 
-  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+  <footer class="footer-note">© 2026 Tumor Sight Platform. Not for clinical use.</footer>
 </body>
 
 </html>
-

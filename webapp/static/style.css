@@ -1,24 +1,37 @@
-/* Tumor Sight 360 — design tokens */
+/* Tumor Sight — design tokens */
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@500;600&display=swap");
 
 :root {
-  --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --bg-base: #f0f4f8;
   --bg-mesh:
-    radial-gradient(1200px 600px at 10% -10%, rgba(14, 165, 233, 0.12), transparent 50%),
-    radial-gradient(900px 500px at 90% 0%, rgba(99, 102, 241, 0.1), transparent 45%),
-    radial-gradient(800px 400px at 50% 100%, rgba(16, 185, 129, 0.06), transparent 50%);
+    radial-gradient(
+      1200px 600px at 10% -10%,
+      rgba(14, 165, 233, 0.12),
+      transparent 50%
+    ),
+    radial-gradient(
+      900px 500px at 90% 0%,
+      rgba(99, 102, 241, 0.1),
+      transparent 45%
+    ),
+    radial-gradient(
+      800px 400px at 50% 100%,
+      rgba(16, 185, 129, 0.06),
+      transparent 50%
+    );
 
   --surface: #ffffff;
   --surface-elevated: #fafbfc;
   --border: rgba(15, 23, 42, 0.08);
   --border-strong: rgba(15, 23, 42, 0.12);
 
-  --text: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text: #000;
+  --text-secondary: #000;
+  --text-muted: #000;
 
   --accent: #0369a1;
   --accent-hover: #0284c7;
@@ -33,8 +46,10 @@
   --radius-lg: 20px;
 
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 12px 40px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-sm:
+    0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md:
+    0 12px 40px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
 
   --topbar-blur: 16px;
 }
@@ -111,7 +126,7 @@ body {
 
 .brand-title {
   display: block;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.15;
@@ -140,13 +155,16 @@ body {
   gap: 8px;
   text-decoration: none;
   padding: 10px 16px;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-soft);
   border: 1px solid rgba(3, 105, 161, 0.2);
   border-radius: 999px;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .top-action:hover {
@@ -288,7 +306,7 @@ body {
   margin: 14px 0 18px;
   padding-left: 1.25rem;
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .batch-preview-list li {
@@ -313,7 +331,7 @@ body {
 
 .batch-preview-name {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 1rem;
   word-break: break-all;
 }
 
@@ -391,7 +409,7 @@ body {
 }
 
 .batch-card-pred {
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -419,18 +437,111 @@ body {
   line-height: 1.4;
 }
 
-/* ——— Static 4×5 batch gallery (/batch-test, files from notebook/script) ——— */
+/* ——— Batch test: YOLO upload + grid ——— */
+.hero .batch-about {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.hero .batch-about summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  list-style: none;
+}
+
+.hero .batch-about summary::-webkit-details-marker {
+  display: none;
+}
+
+.hero .batch-about summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--accent);
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+
+.hero .batch-about[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.hero .batch-about p {
+  margin: 10px 0 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.batch-form-hint {
+  margin: -8px 0 4px;
+  font-size: 1rem;
+}
+
+.batch-results-board {
+  margin-top: 0;
+}
+
+.batch-results-board .batch-results-empty {
+  margin: -4px 0 14px;
+  max-width: 52rem;
+  line-height: 1.5;
+}
+
+.batch-cell-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-variant-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid rgba(3, 105, 161, 0.2);
+}
+
+.batch-variant-pill--muted {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.batch-prob-sep {
+  opacity: 0.5;
+  margin: 0 2px;
+}
+
+.batch-yolo-status {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.batch-yolo-status--hit {
+  color: #047857;
+}
+
+.batch-yolo-status--miss {
+  color: #000000;
+}
+
 .batch-static-info {
   margin-bottom: 16px;
-}
-
-.batch-static-board {
-  margin-top: 8px;
-  padding: 16px;
-}
-
-.batch-static-board h2::before {
-  display: none;
 }
 
 .batch-static-grid {
@@ -482,24 +593,29 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 160px;
+  max-height: 200px;
+  min-height: 72px;
   object-fit: contain;
 }
 
 .batch-static-cell-meta {
-  padding: 8px 10px 10px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 0.6875rem;
 }
 
 .batch-static-probs {
+  margin: 0;
   font-family: var(--font-mono);
+  font-size: 0.6875rem;
   color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .batch-static-fname {
+  margin: 0;
   font-size: 0.625rem;
   color: var(--text-muted);
   white-space: nowrap;
@@ -526,7 +642,7 @@ h1 {
 
 h2 {
   margin: 0 0 16px;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -607,7 +723,7 @@ h3 {
 label {
   display: block;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 1rem;
   margin: 16px 0 8px;
   color: var(--text);
 }
@@ -619,7 +735,7 @@ label:first-of-type {
 .muted {
   color: var(--text-muted);
   font-weight: 500;
-  font-size: 0.8125rem;
+  font-size: 1rem;
 }
 
 .file-input {
@@ -629,7 +745,7 @@ label:first-of-type {
   padding: 14px 16px;
   background: var(--surface-elevated);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 1rem;
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -654,12 +770,15 @@ label:first-of-type {
   border-radius: var(--radius-sm);
   padding: 10px 16px;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 600;
   background: linear-gradient(135deg, var(--accent) 0%, #0c4a6e 100%);
   color: #ffffff;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    opacity 0.15s ease;
 }
 
 .file-input::file-selector-button:hover {
@@ -682,12 +801,22 @@ label:first-of-type {
   font-size: 0.9375rem;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent) 0%, #075985 55%, var(--accent-hover) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    #075985 55%,
+    var(--accent-hover) 100%
+  );
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(3, 105, 161, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow:
+    0 4px 16px rgba(3, 105, 161, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .primary-btn:hover {
@@ -718,7 +847,7 @@ label:first-of-type {
   min-height: 48px;
   padding: 12px 20px;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--surface);
@@ -726,7 +855,10 @@ label:first-of-type {
   border-radius: var(--radius);
   cursor: pointer;
   box-shadow: var(--shadow-xs);
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .secondary-btn:hover {
@@ -765,18 +897,15 @@ img {
   display: block;
   margin: 0 auto;
   padding: 12px;
-  background: repeating-conic-gradient(
-      #f1f5f9 0% 25%,
-      #ffffff 0% 50%
-    )
-    50% / 16px 16px;
+  background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% /
+    16px 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
 
 .note {
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font-size: 1rem;
   margin-top: 12px;
   line-height: 1.55;
 }
@@ -808,7 +937,7 @@ img {
   margin-top: 6px;
   color: var(--accent);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -834,8 +963,10 @@ img {
   background: linear-gradient(180deg, #ffffff, #fafbfc);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 1rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .metrics-row:hover {
@@ -850,7 +981,7 @@ img {
 
 .metrics-row b {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text);
   text-align: right;
@@ -894,7 +1025,7 @@ img {
 .consent-card h4 {
   margin: 16px 0 8px;
   color: #92400e;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -902,7 +1033,7 @@ img {
 .consent-card li {
   color: #3f3f46;
   line-height: 1.6;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .consent-card ul {
@@ -917,7 +1048,7 @@ img {
   margin-top: 18px;
   font-weight: 600;
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 1rem;
   cursor: pointer;
 }
 
@@ -1036,7 +1167,7 @@ img {
 }
 
 .seg-preview-subtitle {
-  font-size: 0.8125rem;
+  font-size: 1rem;
   color: var(--text-muted);
 }
 
@@ -1044,8 +1175,8 @@ img {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border);
-  background:
-    repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 20px 20px;
+  background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% /
+    20px 20px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1070,7 +1201,7 @@ img {
   margin-top: -2px;
   padding: 10px 16px;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--accent);
   cursor: pointer;
@@ -1178,7 +1309,7 @@ body.seg-editor-open {
 
 .seg-editor-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -1186,7 +1317,7 @@ body.seg-editor-open {
 
 .seg-editor-lede {
   margin: 6px 0 0;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   color: var(--text-muted);
   line-height: 1.45;
   max-width: 46ch;
@@ -1228,7 +1359,7 @@ body.seg-editor-open {
   gap: 6px;
   padding: 8px 14px;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -1332,7 +1463,7 @@ body.seg-editor-open {
 
 .seg-brush-value {
   min-width: 22px;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--text);

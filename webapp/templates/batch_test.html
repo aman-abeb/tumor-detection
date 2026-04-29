@@ -15,65 +15,86 @@
   <div class="container">
     <div class="hero card card-hero">
       <div class="hero-badge">Research &amp; evaluation</div>
-      <h1>Batch test</h1>
+      <h1>Batch detection</h1>
       <p class="subtitle">
-        This page shows a fixed <strong>{{ grid_max }}-image</strong> grid (4&nbsp;×&nbsp;5). Tiles are produced <strong>offline</strong> by
-        <code class="batch-code">scripts/generate_static_batch.py</code> or the notebook cell in
-        <code class="batch-code">project.ipynb</code>. The app does not run inference here.
+        Run the same detector as the main workflow on up to <strong>{{ grid_max }}</strong> images at once.
       </p>
+
     </div>
 
-    {% if manifest and manifest.get('error') == 'no_dataset_images' %}
-    <div class="error">
-      The last generator run found no images under <code>BUSI_Jpeg/benign</code> or <code>BUSI_Jpeg/malignant</code>. Add data
-      and rerun the script or notebook cell.
-    </div>
-    {% elif not has_tiles %}
-    <div class="info batch-static-info">
-      No gallery yet. From the project root, run
-      <code class="batch-code">python scripts/generate_static_batch.py</code> or execute the “Batch gallery” cell in
-      <code class="batch-code">project.ipynb</code>, then refresh this page.
-    </div>
+    {% if model_error %}
+    <div class="error">Models could not be loaded: {{ model_error }}</div>
     {% endif %}
 
-    <div class="batch-static-board card">
+    {% if upload_error %}
+    <div class="error">{{ upload_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('batch_test') }}" enctype="multipart/form-data"
+      class="card upload-card batch-run-form">
+      <h2>Upload images</h2>
+      <p class="muted batch-form-hint">PNG, JPEG, WebP, BMP, or TIFF · multiple selection · max {{ grid_max }} files per
+        run</p>
+      <label for="batch-images">Files <span class="muted">(required)</span></label>
+      <input id="batch-images" class="file-input" type="file" name="images"
+        accept="image/png,image/jpeg,image/webp,image/bmp,.tif,.tiff" multiple required />
+      <button type="submit" class="primary-btn">Run batch</button>
+    </form>
+
+    <section class="card batch-results-board" aria-labelledby="batch-results-heading">
+      <h2 id="batch-results-heading">Results</h2>
+      {% if not has_tiles %}
+      <p class="batch-results-empty muted">
+        No batch yet. Choose images above and click <strong>Run batch</strong>; overlays appear here in a {{
+        grid_max }}-slot grid (4&nbsp;×&nbsp;5 on wide screens).
+      </p>
+      {% endif %}
+
       <div class="batch-static-grid">
         {% for cell in cells %}
-        <div class="batch-static-cell {% if cell.empty %}batch-static-cell--empty{% endif %}">
-          {% if not cell.empty %}
+        {% if not cell.empty %}
+        <article class="batch-static-cell">
           <div class="batch-static-cell-frame">
-            {% if cell.tile %}
-            <img
-              class="batch-static-cell-img"
-              src="{{ url_for('static', filename='batch_gallery/' + cell.tile) }}"
-              alt=""
-              loading="lazy"
-            />
+            {% if batch_id is not none and cell.tile_idx is not none %}
+            <img class="batch-static-cell-img"
+              src="{{ url_for('batch_session_tile', batch_id=batch_id, idx=cell.tile_idx) }}" alt="" loading="lazy"
+              decoding="async" />
             {% endif %}
           </div>
           <div class="batch-static-cell-meta">
             {% if cell.get('ok') %}
-            <span class="batch-card-pred batch-card-pred--{{ cell.pred }}">{{ cell.pred | capitalize }}</span>
-            {% if cell.get('p_benign') is not none and cell.get('p_malignant') is not none %}
-            <span class="batch-static-probs">B {{ '%.3f' | format(cell.p_benign) }} · M {{ '%.3f' | format(cell.p_malignant) }}</span>
+            <div class="batch-cell-head">
+              {% if cell.get('detected') %}
+              <span class="batch-yolo-status batch-yolo-status--hit">Detected</span>
+              <span class="batch-variant-pill" title="Input variant">{{ cell.variant | capitalize }}</span>
+              {% else %}
+              <span class="batch-yolo-status batch-yolo-status--miss">No detection</span>
+              <span class="batch-variant-pill batch-variant-pill--muted">{{ cell.variant | capitalize }}</span>
+              {% endif %}
+            </div>
+            {% if cell.get('detected') %}
+            <p class="batch-static-probs">
+              conf {% if cell.conf is not none %}{{ '%.4f' | format(cell.conf) }}{% else %}—{% endif %}
+              <span class="batch-prob-sep">·</span>
+              th {% if cell.used_th is not none %}{{ '%g' | format(cell.used_th) }}{% else %}—{% endif %}
+            </p>
             {% endif %}
             {% else %}
-            <span class="batch-card-err">{{ (cell.error or 'Error')[:80] }}{% if cell.error and cell.error|length > 80 %}…{% endif %}</span>
+            <p class="batch-card-err">{{ (cell.error or 'Error')[:100] }}{% if cell.error and cell.error|length > 100
+              %}…{% endif %}</p>
             {% endif %}
             {% if cell.filename %}
-            <span class="batch-static-fname" title="{{ cell.dataset_path or '' }}">{{ cell.filename }}</span>
+            <p class="batch-static-fname" title="{{ cell.filename }}">{{ cell.filename }}</p>
             {% endif %}
           </div>
-          {% else %}
-          <span class="batch-static-placeholder">No tile</span>
-          {% endif %}
-        </div>
+        </article>
+        {% endif %}
         {% endfor %}
       </div>
-    </div>
+    </section>
   </div>
 
-  <footer class="footer-note">© 2026 Tumor Sight 360 Platform. Not for clinical use.</footer>
+  <footer class="footer-note">© 2026 Tumor Sight Platform. Not for clinical use.</footer>
 </body>
 
 </html>

@@ -1,0 +1,51 @@
+{
+  "batch_id": "99141b8b-cecb-4bf9-b46e-1c859060f24b",
+  "count": 5,
+  "items": [
+    {
+      "ok": true,
+      "filename": "benign (6).png",
+      "tile_idx": 0,
+      "detected": true,
+      "conf": 0.9757111072540283,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (7).png",
+      "tile_idx": 1,
+      "detected": true,
+      "conf": 0.9011594653129578,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (8).png",
+      "tile_idx": 2,
+      "detected": true,
+      "conf": 0.7290136218070984,
+      "used_th": 0.25,
+      "variant": "enhanced"
+    },
+    {
+      "ok": true,
+      "filename": "benign (9).png",
+      "tile_idx": 3,
+      "detected": true,
+      "conf": 0.9780398011207581,
+      "used_th": 0.25,
+      "variant": "original"
+    },
+    {
+      "ok": true,
+      "filename": "benign (10).png",
+      "tile_idx": 4,
+      "detected": true,
+      "conf": 0.9642804265022278,
+      "used_th": 0.25,
+      "variant": "original"
+    }
+  ]
+}

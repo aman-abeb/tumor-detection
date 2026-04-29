@@ -9,7 +9,7 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn as nn
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, abort, redirect, render_template, request, send_file, url_for
 from PIL import Image
 from torchvision import models
 from ultralytics import YOLO
@@ -18,7 +18,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-APP_NAME = "TumorSight 360"
+APP_NAME = "TumorSight"
 # Resolve BASE_DIR from app.py location → one level up (project root)
 BASE_DIR = Path(__file__).resolve().parent.parent
 YOLO_PATH = BASE_DIR / "best.pt"
@@ -32,30 +32,29 @@ CLASS_NAMES = ["benign", "malignant"]
 # tmp dir lives inside the webapp folder so it is always writable
 TMP_DIR = Path(__file__).resolve().parent / "tmp_uploads"
 TMP_DIR.mkdir(parents=True, exist_ok=True)
+BATCH_SESSIONS_DIR = TMP_DIR / "batch_sessions"
+BATCH_SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "12"))
+BATCH_ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff"}
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
 
-# Static batch gallery: webapp/static/batch_gallery/manifest.json + tile_*.png — built by scripts/generate_static_batch.py (or project.ipynb cell)
+# Batch test: up to BATCH_GRID_MAX uploads per run; results under tmp_uploads/batch_sessions/<uuid>/
 BATCH_GRID_MAX = 20
 BATCH_MAX_IMAGES = BATCH_GRID_MAX  # alias for scripts/notebook that generate static gallery tiles
 
-STATIC_BATCH_GALLERY_DIR = Path(__file__).resolve().parent / "static" / "batch_gallery"
-
-
-def _load_static_batch_manifest() -> dict | None:
-    p = STATIC_BATCH_GALLERY_DIR / "manifest.json"
-    if not p.is_file():
+def _safe_uuid(s: str | None):
+    if not s:
         return None
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
+        return uuid.UUID(str(s))
+    except (ValueError, TypeError):
         return None
 
 
-def _batch_gallery_cells(manifest: dict | None) -> list[dict]:
-    """Twenty cells (4x5): real items first, then placeholders."""
+def _batch_yolo_cells(manifest: dict | None, batch_id: str | None) -> list[dict]:
+    """Fixed 4×5 grid: YOLO batch items then empty placeholders."""
     items = []
     if manifest and isinstance(manifest.get("items"), list):
         items = manifest["items"][:BATCH_GRID_MAX]
@@ -64,6 +63,8 @@ def _batch_gallery_cells(manifest: dict | None) -> list[dict]:
         if i < len(items):
             cell = dict(items[i])
             cell["empty"] = False
+            cell["tile_idx"] = cell.get("tile_idx", i)
+            cell["batch_id"] = batch_id
             cells.append(cell)
         else:
             cells.append({"empty": True})
@@ -156,6 +157,77 @@ def _tile_error_bgr(display_name: str, err_short: str) -> np.ndarray:
         if y > h - 24:
             break
     return im
+
+
+def _tile_yolo_detection_bgr(
+    img_rgb: np.ndarray,
+    display_name: str,
+    yolo_box: np.ndarray | None,
+    conf: float,
+    used_th: float | None,
+    variant: str,
+    err_text: str | None = None,
+) -> np.ndarray:
+    """BGR tile: YOLO bbox on image + caption (same family as _tile_bgr_from_result)."""
+    if err_text:
+        return _tile_error_bgr(display_name, err_text)
+
+    vis_bgr = cv2.cvtColor(np.ascontiguousarray(img_rgb, dtype=np.uint8), cv2.COLOR_RGB2BGR)
+    if yolo_box is not None:
+        x1, y1, x2, y2 = yolo_box.astype(int)
+        cv2.rectangle(vis_bgr, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        label = "Tumor"
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        ly2 = max(0, y1 - 8)
+        ly1 = max(0, ly2 - th - 12)
+        cv2.rectangle(vis_bgr, (x1, ly1), (x1 + tw + 10, ly2), (0, 0, 255), -1)
+        cv2.putText(vis_bgr, label, (x1 + 5, ly2 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+
+    vis_rgb = cv2.cvtColor(vis_bgr, cv2.COLOR_BGR2RGB)
+    vis = np.ascontiguousarray(vis_rgb, dtype=np.uint8)
+
+    h, w = vis.shape[:2]
+    max_side = 384
+    scale = min(max_side / max(h, w), 1.0)
+    nh = max(32, int(round(h * scale)))
+    nw = max(32, int(round(w * scale)))
+    vis_rs = cv2.resize(vis, (nw, nh), interpolation=cv2.INTER_AREA)
+
+    banner_h = 64
+    pad_bgr = (248, 250, 252)
+    canvas_bgr = np.zeros((nh + banner_h, nw, 3), dtype=np.uint8)
+    canvas_bgr[:] = pad_bgr
+
+    rgb_tile = cv2.cvtColor(vis_rs, cv2.COLOR_RGB2BGR)
+    canvas_bgr[:nh, :nw] = rgb_tile
+
+    if yolo_box is None:
+        line2 = f"YOLO: no detection · variant={variant}"
+    else:
+        th_s = f"{used_th:g}" if used_th is not None else "—"
+        line2 = f"conf={conf:.4f} · th={th_s} · {variant}"
+
+    cv2.putText(
+        canvas_bgr,
+        _truncate_middle(display_name, 36),
+        (10, nh + 24),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.48,
+        (40, 55, 70),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        canvas_bgr,
+        line2,
+        (10, nh + 48),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.45,
+        (15, 85, 120),
+        1,
+        cv2.LINE_AA,
+    )
+    return canvas_bgr
 
 
 def _case_state_path(case_id: str) -> Path:
@@ -433,110 +505,6 @@ def build_class_plot(probs):
     return fig_to_data_uri(fig)
 
 
-def roc_curve_manual(y_true, y_score):
-    y_true = np.asarray(y_true).astype(int)
-    y_score = np.asarray(y_score).astype(float)
-
-    order = np.argsort(-y_score)
-    y_true = y_true[order]
-    y_score = y_score[order]
-
-    P = int(np.sum(y_true == 1))
-    N = int(np.sum(y_true == 0))
-    if P == 0 or N == 0:
-        raise ValueError("ROC needs both positive and negative samples.")
-
-    tps = 0
-    fps = 0
-    fpr = [0.0]
-    tpr = [0.0]
-    for yt in y_true:
-        if yt == 1:
-            tps += 1
-        else:
-            fps += 1
-        fpr.append(fps / N)
-        tpr.append(tps / P)
-    return np.array(fpr), np.array(tpr)
-
-
-def auc_trapz(x, y):
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    trap = getattr(np, "trapz", None)
-    if callable(trap):
-        return float(trap(y, x))
-    # numpy>=2.0
-    return float(np.trapezoid(y, x))
-
-
-def build_roc_plot(fpr, tpr, auc_val):
-    fig, ax = plt.subplots(figsize=(5.2, 4))
-    ax.plot(fpr, tpr, label=f"ROC (AUC={auc_val:.3f})", color="#5DA5DA", linewidth=2)
-    ax.plot([0, 1], [0, 1], linestyle="--", color="gray", linewidth=1)
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate")
-    ax.set_title("ResNet18 ROC (BUSI_Jpeg sample)")
-    ax.grid(alpha=0.25)
-    ax.legend(loc="lower right")
-    return fig_to_data_uri(fig)
-
-
-def compute_roc():
-    """Compute the ROC curve fresh on every call (no caching)."""
-    result = {"uri": None, "auc": None, "n": 0, "error": None}
-    try:
-        max_samples = int(os.getenv("ROC_MAX_SAMPLES", "200"))
-        base_dir = BASE_DIR / "BUSI_Jpeg"
-        pos_dir = base_dir / "malignant"
-        neg_dir = base_dir / "benign"
-
-        pos_paths = sorted(pos_dir.glob("*.png"))
-        neg_paths = sorted(neg_dir.glob("*.png"))
-        if not pos_paths or not neg_paths:
-            raise FileNotFoundError("BUSI_Jpeg/benign and BUSI_Jpeg/malignant PNGs are required for ROC.")
-
-        # Balance classes and cap.
-        m = min(len(pos_paths), len(neg_paths), max_samples // 2 if max_samples > 1 else 1)
-        pos_paths = pos_paths[:m]
-        neg_paths = neg_paths[:m]
-
-        y_true = []
-        y_score = []
-
-        # Prevent training-time artifacts like masks and non-image files by strict dirs + extension.
-        for p in neg_paths:
-            bgr = cv2.imread(str(p))
-            if bgr is None:
-                continue
-            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-            _, probs = predict_classification(rgb)
-            y_true.append(0)
-            y_score.append(float(probs[1]))  # P(malignant)
-
-        for p in pos_paths:
-            bgr = cv2.imread(str(p))
-            if bgr is None:
-                continue
-            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-            _, probs = predict_classification(rgb)
-            y_true.append(1)
-            y_score.append(float(probs[1]))  # P(malignant)
-
-        if len(set(y_true)) < 2:
-            raise ValueError("Not enough valid images to compute ROC.")
-
-        fpr, tpr = roc_curve_manual(y_true, y_score)
-        auc_val = auc_trapz(fpr, tpr)
-        result.update({"uri": build_roc_plot(fpr, tpr, auc_val), "auc": float(auc_val), "n": int(len(y_true))})
-    except Exception as e:
-        result.update({"error": str(e)})
-
-    return result
-
-
 def save_uploaded_image(image_pil):
     case_id = str(uuid.uuid4())
     path = TMP_DIR / f"{case_id}.png"
@@ -729,7 +697,6 @@ def analyze():
 
         cls_idx, cls_probs = predict_classification(img_rgb)
         cls_bar_uri = build_class_plot(cls_probs)
-        roc = compute_roc()
 
         cleanup_case(case_id)
 
@@ -753,21 +720,118 @@ def analyze():
             cls_pred=CLASS_NAMES[cls_idx],
             cls_prob_benign=float(cls_probs[0]),
             cls_prob_malignant=float(cls_probs[1]),
-            roc_uri=roc.get("uri"),
-            roc_auc=roc.get("auc"),
-            roc_n=roc.get("n"),
-            roc_error=roc.get("error"),
         )
 
     return redirect(url_for("index", message="Unknown stage. Please upload again."))
 
 
-@app.route("/batch-test")
+@app.route("/batch-session/<batch_id>/tile/<int:idx>.png")
+def batch_session_tile(batch_id: str, idx: int):
+    """Serve a single YOLO batch tile (UUID session directory)."""
+    uid = _safe_uuid(batch_id)
+    if uid is None or idx < 0 or idx >= BATCH_GRID_MAX:
+        abort(404)
+    path = BATCH_SESSIONS_DIR / str(uid) / f"{idx:03d}.png"
+    if not path.is_file():
+        abort(404)
+    return send_file(path, mimetype="image/png")
+
+
+@app.route("/batch-test", methods=["GET", "POST"])
 def batch_test():
-    """Static tiles + manifest produced offline (scripts/generate_static_batch.py or project.ipynb)."""
-    raw_manifest = _load_static_batch_manifest()
-    manifest = raw_manifest if isinstance(raw_manifest, dict) else {}
-    cells = _batch_gallery_cells(manifest)
+    """Upload up to BATCH_GRID_MAX images; run YOLO detection and show tiled overlays."""
+    manifest: dict = {}
+    upload_error: str | None = None
+    model_error: str | None = None
+    batch_id: str | None = None
+
+    if request.method == "POST":
+        files = [f for f in request.files.getlist("images") if f and getattr(f, "filename", None)]
+        if not files:
+            return redirect(url_for("batch_test", error="no_files"))
+        files = files[:BATCH_GRID_MAX]
+
+        _load_models_once()
+        if _model_error:
+            model_error = _model_error
+            cells = _batch_yolo_cells(None, None)
+            return render_template(
+                "batch_test.html",
+                app_name=APP_NAME,
+                manifest={},
+                cells=cells,
+                has_tiles=False,
+                batch_id=None,
+                upload_error=None,
+                model_error=model_error,
+                grid_max=BATCH_GRID_MAX,
+            )
+
+        bid = uuid.uuid4()
+        out_dir = BATCH_SESSIONS_DIR / str(bid)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        items: list[dict] = []
+
+        for idx, file in enumerate(files):
+            fname_raw = file.filename or f"image_{idx}"
+            stem = Path(fname_raw).name
+            ext = Path(fname_raw).suffix.lower()
+            if ext not in BATCH_ALLOWED_EXT:
+                tile_bgr = _tile_error_bgr(stem, f"Unsupported type {ext or '(none)'}")
+                cv2.imwrite(str(out_dir / f"{idx:03d}.png"), tile_bgr)
+                items.append({"ok": False, "filename": stem, "tile_idx": idx, "error": f"Unsupported type {ext}"})
+                continue
+            try:
+                image_pil = Image.open(file.stream).convert("RGB")
+                img_rgb = np.array(image_pil)
+                if img_rgb.size == 0:
+                    raise ValueError("Empty image.")
+                yolo_box, conf, _, used_th, variant = predict_yolo(img_rgb)
+                tile_bgr = _tile_yolo_detection_bgr(
+                    img_rgb,
+                    stem,
+                    yolo_box,
+                    float(conf),
+                    float(used_th) if used_th is not None else None,
+                    str(variant),
+                )
+                cv2.imwrite(str(out_dir / f"{idx:03d}.png"), tile_bgr)
+                items.append(
+                    {
+                        "ok": True,
+                        "filename": stem,
+                        "tile_idx": idx,
+                        "detected": yolo_box is not None,
+                        "conf": float(conf) if yolo_box is not None else None,
+                        "used_th": float(used_th) if used_th is not None and yolo_box is not None else None,
+                        "variant": str(variant),
+                    }
+                )
+            except Exception as exc:
+                tile_bgr = _tile_error_bgr(stem, str(exc))
+                cv2.imwrite(str(out_dir / f"{idx:03d}.png"), tile_bgr)
+                items.append({"ok": False, "filename": stem, "tile_idx": idx, "error": str(exc)})
+
+        manifest_body = {"batch_id": str(bid), "count": len(items), "items": items}
+        (out_dir / "manifest.json").write_text(json.dumps(manifest_body, indent=2), encoding="utf-8")
+        return redirect(url_for("batch_test", batch_id=str(bid)))
+
+    err_q = request.args.get("error")
+    if err_q == "no_files":
+        upload_error = "Choose one or more images to run YOLO batch detection."
+
+    bid_arg = request.args.get("batch_id")
+    uid = _safe_uuid(bid_arg)
+    if uid is not None:
+        mp = BATCH_SESSIONS_DIR / str(uid) / "manifest.json"
+        if mp.is_file():
+            try:
+                manifest = json.loads(mp.read_text(encoding="utf-8"))
+                batch_id = str(uid)
+            except Exception:
+                manifest = {}
+
+    cells = _batch_yolo_cells(manifest if manifest else None, batch_id)
     has_tiles = any(not c.get("empty") for c in cells)
     return render_template(
         "batch_test.html",
@@ -775,6 +839,9 @@ def batch_test():
         manifest=manifest,
         cells=cells,
         has_tiles=has_tiles,
+        batch_id=batch_id,
+        upload_error=upload_error,
+        model_error=model_error,
         grid_max=BATCH_GRID_MAX,
     )
 

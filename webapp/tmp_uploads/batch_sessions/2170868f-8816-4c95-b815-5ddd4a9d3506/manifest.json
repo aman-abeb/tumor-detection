@@ -1,0 +1,106 @@
+{
+  "batch_id": "2170868f-8816-4c95-b815-5ddd4a9d3506",
+  "count": 10,
+  "items": [
+    {
+      "ok": true,
+      "filename": "benign (2).png",
+      "tile_idx": 0,
+      "detected": true,
+      "conf": 0.9881165027618408,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (3).png",
+      "tile_idx": 1,
+      "detected": true,
+      "conf": 0.9922004342079163,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (4).png",
+      "tile_idx": 2,
+      "detected": true,
+      "conf": 0.9567888379096985,
+      "used_th": 0.25,
+      "variant": "enhanced",
+      "num_boxes": 2
+    },
+    {
+      "ok": true,
+      "filename": "benign (5).png",
+      "tile_idx": 3,
+      "detected": true,
+      "conf": 0.9568057656288147,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (6).png",
+      "tile_idx": 4,
+      "detected": true,
+      "conf": 0.9757111072540283,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (8).png",
+      "tile_idx": 5,
+      "detected": true,
+      "conf": 0.7290136218070984,
+      "used_th": 0.25,
+      "variant": "enhanced",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (9).png",
+      "tile_idx": 6,
+      "detected": true,
+      "conf": 0.9780398011207581,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (10).png",
+      "tile_idx": 7,
+      "detected": true,
+      "conf": 0.9642804265022278,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (11).png",
+      "tile_idx": 8,
+      "detected": true,
+      "conf": 0.9775739312171936,
+      "used_th": 0.25,
+      "variant": "enhanced",
+      "num_boxes": 1
+    },
+    {
+      "ok": true,
+      "filename": "benign (12).png",
+      "tile_idx": 9,
+      "detected": true,
+      "conf": 0.9614914655685425,
+      "used_th": 0.25,
+      "variant": "original",
+      "num_boxes": 1
+    }
+  ]
+}

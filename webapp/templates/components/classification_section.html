@@ -11,6 +11,7 @@
     </div>
   </div>
 
+  {#
   <div class="split-grid">
     <div class="metrics-table">
       <div class="metrics-row"><span>ROC AUC (reference)</span><b>{% if roc_auc is not none %}{{ "%.3f"|format(roc_auc) }}{% else %}N/A{% endif %}</b></div>
@@ -25,4 +26,5 @@
     <div class="figure-frame"><img src="{{ roc_uri }}" alt="ROC curve" /></div>
     {% endif %}
   </div>
+  #}
 </div>

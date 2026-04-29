@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Write webapp/static/batch_gallery/tile_{00..19}.png + manifest.json
-for the Flask /batch-test page.
+Legacy offline generator: segmentation + classification tiles under
+webapp/static/batch_gallery/ (manifest.json + tile_*.png).
 
-Run from the repo root (same as Jupyter when opened from project folder):
+The /batch-test page uses live YOLO batch uploads instead; this script is optional for static demos only.
+
+Run from the repo root:
     python scripts/generate_static_batch.py
 
-Or run the companion cell at the bottom of project.ipynb.
-
-Requires BUSI_Jpeg/*.png|.jpg|.jpeg directly under benign/ & malignant/ and trained weights alongside app.py imports.
+Requires BUSI_Jpeg/... and the same checkpoints imported by webapp/app.py.
 """
 
 from __future__ import annotations
